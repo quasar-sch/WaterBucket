@@ -16,6 +16,16 @@
     --good:#22c55e;
     --warn:#fbbf24;
     --bad:#fb7185;
+
+    /* Jug visuals */
+    --cup-stroke: rgba(255,255,255,.22);
+    --cup-fill: rgba(255,255,255,.06);
+    --cup-shadow: rgba(0,0,0,.22);
+    --tick: rgba(255,255,255,.28);
+    --tickText: rgba(231,238,252,.75);
+    --waterTop: rgba(110,231,255,.85);
+    --waterBottom: rgba(110,231,255,.28);
+    --waterEdge: rgba(255,255,255,.22);
   }
   *{box-sizing:border-box}
   body{
@@ -40,9 +50,7 @@
     display:flex;align-items:center;justify-content:space-between;
     padding:16px 18px;border-bottom:1px solid var(--line);
   }
-  .title{
-    display:flex;flex-direction:column;gap:2px
-  }
+  .title{display:flex;flex-direction:column;gap:2px}
   .title h1{margin:0;font-size:18px;letter-spacing:.2px}
   .title p{margin:0;color:var(--muted);font-size:12px;line-height:1.35}
   .pill{
@@ -103,21 +111,17 @@
     border-color: rgba(251,113,133,.38);
     background: rgba(251,113,133,.10);
   }
-  button.ghost{
-    background: transparent;
-  }
-  button:disabled{
-    opacity:.45; cursor:not-allowed;
-  }
+  button.ghost{background: transparent;}
+  button:disabled{opacity:.45; cursor:not-allowed;}
 
-  /* Jugs */
+  /* Jugs layout */
   .jugs{
     display:flex; gap:12px; justify-content:center; align-items:flex-end;
     padding:10px 6px 6px 6px;
     min-height:320px;
   }
   .jug{
-    width:120px; max-width:30vw;
+    width:140px; max-width:32vw;
     border:1px solid var(--line);
     background: rgba(255,255,255,.03);
     border-radius:16px;
@@ -137,19 +141,19 @@
     font-size:12px; color:var(--muted); margin-bottom:8px;
   }
   .jug .cap strong{color:var(--ink); font-size:12px}
-  .tank{
-    height:220px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(0,0,0,.18);
+
+  .jugSvgWrap{
+    width:100%;
+    height:230px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    border-radius:12px;
+    background: rgba(0,0,0,.10);
+    border:1px solid rgba(255,255,255,.08);
     overflow:hidden;
-    position:relative;
   }
-  .water{
-    position:absolute;left:0;right:0;bottom:0;
-    height:0%;
-    background: linear-gradient(180deg, rgba(110,231,255,.85), rgba(110,231,255,.25));
-    transition: height .18s ease;
-  }
+
   .amt{
     margin-top:8px;
     display:flex; justify-content:space-between; align-items:center;
@@ -184,11 +188,11 @@
     color:var(--muted);
     font-size:13px; line-height:1.45;
   }
-  .banner.good{border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.08)}
   .banner.warn{border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.08)}
   .banner.bad{border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.08)}
-  .center{
-    text-align:center;
+  .row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; flex-wrap:wrap;
   }
 
   /* Modal */
@@ -255,14 +259,7 @@
     border-top:1px solid var(--line);
   }
   .tiny{font-size:12px;color:var(--muted);line-height:1.45}
-  .row{
-    display:flex; align-items:center; justify-content:space-between;
-    gap:10px; flex-wrap:wrap;
-  }
-
-  .start{
-    padding:18px;
-  }
+  .start{padding:18px;}
   .modeCard{
     border:1px solid var(--line);
     background: rgba(255,255,255,.03);
@@ -277,7 +274,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="card" id="appCard">
+  <div class="card">
 
     <!-- Start Screen -->
     <div id="startScreen">
@@ -286,7 +283,7 @@
           <h1>물통 미션 : 정확한 물의 양을 만들어라</h1>
           <p>물을 옮겨 목표한 양을 만들어 보세요.</p>
         </div>
-        <div class="pill"><strong>버전</strong> v1.0</div>
+        <div class="pill"><strong>버전</strong> v1.1 (SVG)</div>
       </div>
 
       <div class="start">
@@ -434,23 +431,19 @@
     return `${pad2(mm)}:${pad2(ss)}`;
   };
 
-  // ---------- BFS (minimum moves + solvable check) ----------
+  // ---------- BFS ----------
   function bfsMinMoves(capacities, goal){
     const n = capacities.length;
     const start = Array(n).fill(0);
     const key = (st) => st.join(',');
     const q = [{st:start, d:0}];
     const seen = new Set([key(start)]);
-
     const isGoal = (st) => st.some(v => v === goal);
     if (isGoal(start)) return 0;
 
     while(q.length){
       const {st, d} = q.shift();
-
-      // Actions: fill i, empty i, pour i->j
       for(let i=0;i<n;i++){
-        // fill
         if(st[i] !== capacities[i]){
           const ns = st.slice(); ns[i] = capacities[i];
           const k = key(ns);
@@ -459,7 +452,6 @@
             seen.add(k); q.push({st:ns,d:d+1});
           }
         }
-        // empty
         if(st[i] !== 0){
           const ns = st.slice(); ns[i] = 0;
           const k = key(ns);
@@ -468,7 +460,6 @@
             seen.add(k); q.push({st:ns,d:d+1});
           }
         }
-        // pour i->j
         if(st[i] !== 0){
           for(let j=0;j<n;j++){
             if(i===j) continue;
@@ -487,11 +478,10 @@
         }
       }
     }
-    return null; // unreachable
+    return null;
   }
 
-  // ---------- Stage Data ----------
-  // Normal: 20 stages, solvable by design (we still compute min via BFS)
+  // ---------- Stages ----------
   const normalStages = [
     {caps:[3,5], goal:4},
     {caps:[2,7], goal:5},
@@ -517,19 +507,18 @@
     {caps:[3,7,15], goal:9},
   ];
 
-  // Hard: 10 stages mixed (some are intentionally impossible)
   const hardStages = [
-    {caps:[3,5], goal:4},     // possible
-    {caps:[2,9], goal:7},     // possible
-    {caps:[5,8], goal:6},     // possible
-    {caps:[4,7], goal:5},     // possible
-    {caps:[3,7,11], goal:5},  // possible
-    {caps:[6,11], goal:1},    // possible
+    {caps:[3,5], goal:4},
+    {caps:[2,9], goal:7},
+    {caps:[5,8], goal:6},
+    {caps:[4,7], goal:5},
+    {caps:[3,7,11], goal:5},
+    {caps:[6,11], goal:1},
 
-    {caps:[6,10], goal:5},    // impossible
-    {caps:[4,8], goal:6},     // impossible
-    {caps:[3,9], goal:4},     // impossible
-    {caps:[5,15], goal:4},    // impossible
+    {caps:[6,10], goal:5},
+    {caps:[4,8], goal:6},
+    {caps:[3,9], goal:4},
+    {caps:[5,15], goal:4},
   ];
 
   const tiers = [
@@ -538,31 +527,29 @@
     {name:"고급", from:14, to:20},
   ];
 
-  // ---------- Hints (generic, no solutions) ----------
   const hintLevels = [
     "한 번에 해결하려고 하지 말고, 먼저 ‘중간 상태’를 만들어 보세요.",
     "작은 통을 ‘측정 도구’처럼 써 보세요. 가득 채우고 옮기면 남는 양이 생깁니다.",
     "같은 행동을 반복하다가, 이전과 똑같은 상황이 다시 나오면 다른 선택을 시도해 보세요."
   ];
 
-  // ---------- App State ----------
+  // ---------- State ----------
   const state = {
-    mode: null, // 'normal' | 'hard'
+    mode: null,
     stages: [],
-    idx: 0, // 0-based
+    idx: 0,
     caps: [],
     goal: 0,
     amounts: [],
-    selected: null, // selected jug index
+    selected: null,
     moves: 0,
     startMs: 0,
     timerId: null,
     loopSet: new Set(),
     loopDetected: false,
-    minMoves: null, // computed (normal scoring basis)
+    minMoves: null,
     hintUsed: 0,
-    // records
-    records: [], // per stage record objects
+    records: []
   };
 
   // ---------- DOM ----------
@@ -589,7 +576,7 @@
   const modalBody = $("#modalBody");
   const modalFooter = $("#modalFooter");
 
-  // ---------- UI helpers ----------
+  // ---------- Modal helpers ----------
   function showModal(title, bodyNode, footerButtons){
     modalTitle.textContent = title;
     modalBody.innerHTML = "";
@@ -598,13 +585,9 @@
     footerButtons.forEach(b => modalFooter.appendChild(b));
     modalOverlay.style.display = "flex";
   }
-  function closeModal(){
-    modalOverlay.style.display = "none";
-  }
+  function closeModal(){ modalOverlay.style.display = "none"; }
   $("#btnCloseModal").addEventListener("click", closeModal);
-  modalOverlay.addEventListener("click", (e) => {
-    if(e.target === modalOverlay) closeModal();
-  });
+  modalOverlay.addEventListener("click", (e) => { if(e.target === modalOverlay) closeModal(); });
 
   function setScreen(which){
     if(which === "start"){
@@ -617,27 +600,129 @@
     }
   }
 
-  function resetStageState(){
-    state.amounts = Array(state.caps.length).fill(0);
-    state.selected = null;
-    state.moves = 0;
-    state.hintUsed = 0;
-    state.loopSet = new Set();
-    state.loopDetected = false;
-    loopBanner.style.display = "none";
-    btnDeclareImpossible.disabled = true;
-    btnDeclareImpossible.style.display = (state.mode === "hard") ? "" : "none";
+  // ---------- SVG Jug builder ----------
+  function buildJugSvg({id, cap, amt, selected}){
+    // cup inner area (for clipping)
+    const w = 120, h = 210;
+    const innerX = 22, innerY = 22, innerW = 76, innerH = 160;
+    const waterH = (amt / cap) * innerH;
+    const waterY = innerY + (innerH - waterH);
 
-    // initialize loopSet with start state
-    state.loopSet.add(state.amounts.join(','));
-    hintBox.textContent = "힌트가 여기에 표시됩니다.";
-    btnHint.disabled = false;
+    // ticks: minimal 0 / mid / max
+    const tickSideX = innerX + innerW + 6; // right side
+    const tick0Y = innerY + innerH;
+    const tickMidY = innerY + innerH/2;
+    const tickMaxY = innerY;
 
-    state.startMs = Date.now();
-    startTimer();
-    render();
+    // water wave path (very subtle)
+    const waveAmp = 2.2;
+    const wave = `M ${innerX} ${waterY}
+      C ${innerX+innerW*0.25} ${waterY-waveAmp}, ${innerX+innerW*0.45} ${waterY+waveAmp}, ${innerX+innerW*0.60} ${waterY}
+      C ${innerX+innerW*0.75} ${waterY-waveAmp}, ${innerX+innerW*0.88} ${waterY+waveAmp}, ${innerX+innerW} ${waterY}
+      L ${innerX+innerW} ${innerY+innerH}
+      L ${innerX} ${innerY+innerH}
+      Z`;
+
+    const selGlow = selected
+      ? `<filter id="glow-${id}" x="-50%" y="-50%" width="200%" height="200%">
+           <feGaussianBlur stdDeviation="2.4" result="blur"/>
+           <feColorMatrix in="blur" type="matrix"
+             values="0 0 0 0 0.43
+                     0 0 0 0 0.91
+                     0 0 0 0 1
+                     0 0 0 .35 0" result="blue"/>
+           <feMerge><feMergeNode in="blue"/><feMergeNode in="SourceGraphic"/></feMerge>
+         </filter>`
+      : "";
+
+    return `
+      <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" aria-hidden="true">
+        <defs>
+          ${selGlow}
+          <linearGradient id="cupGrad-${id}" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="rgba(255,255,255,.08)"/>
+            <stop offset="0.35" stop-color="rgba(255,255,255,.03)"/>
+            <stop offset="0.7" stop-color="rgba(255,255,255,.07)"/>
+            <stop offset="1" stop-color="rgba(255,255,255,.04)"/>
+          </linearGradient>
+
+          <linearGradient id="waterGrad-${id}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="var(--waterTop)"/>
+            <stop offset="1" stop-color="var(--waterBottom)"/>
+          </linearGradient>
+
+          <clipPath id="cupClip-${id}">
+            <!-- inner cavity -->
+            <rect x="${innerX}" y="${innerY}" width="${innerW}" height="${innerH}" rx="10" ry="10"></rect>
+          </clipPath>
+        </defs>
+
+        <!-- subtle base shadow -->
+        <ellipse cx="${w/2}" cy="${h-10}" rx="36" ry="8" fill="rgba(0,0,0,.25)"></ellipse>
+
+        <!-- cup body -->
+        <g ${selected ? `filter="url(#glow-${id})"` : ""}>
+          <!-- outer cup -->
+          <path d="M 18 20
+                   Q 18 10 28 10
+                   L 92 10
+                   Q 102 10 102 20
+                   L 106 184
+                   Q 106 198 92 198
+                   L 28 198
+                   Q 14 198 14 184
+                   Z"
+                fill="url(#cupGrad-${id})"
+                stroke="var(--cup-stroke)" stroke-width="1.2" />
+
+          <!-- rim -->
+          <path d="M 26 10 L 94 10
+                   Q 102 10 102 18
+                   L 102 22
+                   Q 102 14 94 14
+                   L 26 14
+                   Q 18 14 18 22
+                   L 18 18
+                   Q 18 10 26 10 Z"
+                fill="rgba(255,255,255,.10)" stroke="rgba(255,255,255,.18)" stroke-width=".6"/>
+
+          <!-- base thickness -->
+          <rect x="18" y="186" width="88" height="14" rx="10" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.12)" stroke-width=".6"></rect>
+
+          <!-- inner wall tint -->
+          <rect x="${innerX}" y="${innerY}" width="${innerW}" height="${innerH}" rx="10"
+                fill="rgba(0,0,0,.18)" stroke="rgba(255,255,255,.10)" stroke-width=".6"></rect>
+
+          <!-- highlight strip -->
+          <rect x="28" y="22" width="10" height="164" rx="6" fill="rgba(255,255,255,.07)"></rect>
+        </g>
+
+        <!-- water (clipped to inner cavity) -->
+        <g clip-path="url(#cupClip-${id})">
+          <!-- animated water body -->
+          <path d="${wave}" fill="url(#waterGrad-${id})" style="transition: d .25s ease;"></path>
+          <!-- water edge highlight -->
+          <path d="M ${innerX} ${waterY}
+                   C ${innerX+innerW*0.25} ${waterY-waveAmp}, ${innerX+innerW*0.45} ${waterY+waveAmp}, ${innerX+innerW*0.60} ${waterY}
+                   C ${innerX+innerW*0.75} ${waterY-waveAmp}, ${innerX+innerW*0.88} ${waterY+waveAmp}, ${innerX+innerW} ${waterY}"
+                fill="none" stroke="var(--waterEdge)" stroke-width="1" opacity=".65"></path>
+        </g>
+
+        <!-- minimal ticks -->
+        <g opacity=".95">
+          <line x1="${tickSideX}" y1="${tickMaxY}" x2="${tickSideX+10}" y2="${tickMaxY}" stroke="var(--tick)" stroke-width="1"/>
+          <line x1="${tickSideX}" y1="${tickMidY}" x2="${tickSideX+8}" y2="${tickMidY}" stroke="var(--tick)" stroke-width="1"/>
+          <line x1="${tickSideX}" y1="${tick0Y}" x2="${tickSideX+10}" y2="${tick0Y}" stroke="var(--tick)" stroke-width="1"/>
+
+          <text x="${tickSideX+12}" y="${tickMaxY+4}" font-size="10" fill="var(--tickText)">${cap}</text>
+          <text x="${tickSideX+12}" y="${tickMidY+4}" font-size="10" fill="var(--tickText)">${Math.round(cap/2)}</text>
+          <text x="${tickSideX+12}" y="${tick0Y+4}" font-size="10" fill="var(--tickText)">0</text>
+        </g>
+      </svg>
+    `;
   }
 
+  // ---------- UI ----------
   function stopTimer(){
     if(state.timerId){
       clearInterval(state.timerId);
@@ -651,6 +736,25 @@
       timeText.textContent = msToMMSS(ms);
     }, 250);
     timeText.textContent = "00:00";
+  }
+
+  function resetStageState(){
+    state.amounts = Array(state.caps.length).fill(0);
+    state.selected = null;
+    state.moves = 0;
+    state.hintUsed = 0;
+    state.loopSet = new Set();
+    state.loopDetected = false;
+    loopBanner.style.display = "none";
+    btnDeclareImpossible.disabled = true;
+    btnDeclareImpossible.style.display = (state.mode === "hard") ? "" : "none";
+    state.loopSet.add(state.amounts.join(','));
+    hintBox.textContent = "힌트가 여기에 표시됩니다.";
+    btnHint.disabled = false;
+
+    state.startMs = Date.now();
+    startTimer();
+    render();
   }
 
   function render(){
@@ -675,6 +779,14 @@
       ? "선택: 없음"
       : `선택: ${state.selected+1}번 통 (${state.caps[state.selected]}L)`;
 
+    // loop banner
+    if(state.mode === "hard"){
+      loopBanner.style.display = state.loopDetected ? "" : "none";
+      btnDeclareImpossible.disabled = !state.loopDetected;
+    }else{
+      loopBanner.style.display = "none";
+    }
+
     // build jugs
     jugsEl.innerHTML = "";
     state.caps.forEach((cap, i) => {
@@ -684,17 +796,20 @@
 
       const head = el("div","cap");
       head.innerHTML = `<span>${i+1}번 통</span><strong>${cap}L</strong>`;
-      const tank = el("div","tank");
-      const water = el("div","water");
-      const pct = (state.amounts[i] / cap) * 100;
-      water.style.height = `${pct}%`;
-      tank.appendChild(water);
+
+      const svgWrap = el("div","jugSvgWrap");
+      svgWrap.innerHTML = buildJugSvg({
+        id: `s${state.idx}_j${i}`,
+        cap,
+        amt: state.amounts[i],
+        selected: state.selected===i
+      });
 
       const amt = el("div","amt");
       amt.innerHTML = `<span>현재</span><strong>${state.amounts[i]}L</strong>`;
 
       jug.appendChild(head);
-      jug.appendChild(tank);
+      jug.appendChild(svgWrap);
       jug.appendChild(amt);
 
       jug.addEventListener("click", () => onJugClick(i));
@@ -704,48 +819,58 @@
 
       jugsEl.appendChild(jug);
     });
-
-    // loop banners
-    if(state.mode === "hard"){
-      loopBanner.style.display = state.loopDetected ? "" : "none";
-      btnDeclareImpossible.disabled = !state.loopDetected;
-    }
   }
 
-  // ---------- Game logic ----------
-  function onJugClick(i){
-    // If no selection: select jug
-    if(state.selected == null){
-      state.selected = i;
-      render();
-      return;
-    }
-
-    // Same jug: just keep selected (no-op)
-    if(state.selected === i){
-      render();
-      return;
-    }
-
-    // Pour from selected -> i
-    pour(state.selected, i);
-  }
-
+  // ---------- Game logic (selection fix included) ----------
   function addMoveAndCheckLoop(){
     state.moves += 1;
-
     const key = state.amounts.join(',');
     if(state.loopSet.has(key)){
       state.loopDetected = true;
     }else{
       state.loopSet.add(key);
     }
-
     movesText.textContent = String(state.moves);
     if(state.mode === "hard"){
       loopBanner.style.display = state.loopDetected ? "" : "none";
       btnDeclareImpossible.disabled = !state.loopDetected;
     }
+  }
+
+  function onJugClick(i){
+    // 1) If nothing selected: select i
+    if(state.selected == null){
+      state.selected = i;
+      render();
+      return;
+    }
+
+    // 2) If same jug: keep selected (no-op)
+    if(state.selected === i){
+      render();
+      return;
+    }
+
+    // 3) If different jug: try to pour; if cannot, just switch selection
+    const from = state.selected;
+    const to = i;
+
+    const canPour = canPourAmount(from, to) > 0;
+
+    if(canPour){
+      pour(from, to); // pour handles move count, loop, win, and selection
+    }else{
+      // IMPORTANT FIX: even if pour is impossible, selection should move
+      state.selected = to;
+      render();
+    }
+  }
+
+  function canPourAmount(from, to){
+    const capTo = state.caps[to];
+    if(state.amounts[from] <= 0) return 0;
+    if(state.amounts[to] >= capTo) return 0;
+    return Math.min(state.amounts[from], capTo - state.amounts[to]);
   }
 
   function fillSelected(){
@@ -769,47 +894,48 @@
   }
 
   function pour(from, to){
-    const capTo = state.caps[to];
-    if(state.amounts[from] === 0) return;
-    if(state.amounts[to] === capTo) return;
-
-    const amount = Math.min(state.amounts[from], capTo - state.amounts[to]);
-    if(amount <= 0) return;
-
+    const amount = canPourAmount(from, to);
+    if(amount <= 0){
+      // if somehow called, still switch selection (UX rule)
+      state.selected = to;
+      render();
+      return;
+    }
     state.amounts[from] -= amount;
     state.amounts[to] += amount;
-
     addMoveAndCheckLoop();
-    // after pouring, select destination (helps fast play)
+    // after pour, select destination
     state.selected = to;
     render();
     checkWin();
   }
 
-  function isGoalReached(){
-    return state.amounts.some(v => v === state.goal);
-  }
+  function isGoalReached(){ return state.amounts.some(v => v === state.goal); }
 
   function computeNormalScore(moves, ms, minMoves){
-    // 100점 만점: 초과 이동/시간 패널티
-    // - 이동: (moves - minMoves) * 5점
-    // - 시간: 기준시간(= minMoves*18초) 초과 시, 30초마다 -5점
     const base = 100;
     const extraMoves = Math.max(0, moves - (minMoves ?? moves));
     const movePenalty = extraMoves * 5;
-
-    const baselineMs = (minMoves ?? moves) * 18 * 1000; // 직관적 기준(스테이지 규모에 따라 자연 증가)
+    const baselineMs = (minMoves ?? moves) * 18 * 1000;
     const extraMs = Math.max(0, ms - baselineMs);
     const timePenalty = Math.floor(extraMs / (30*1000)) * 5;
-
     return Math.max(0, base - movePenalty - timePenalty);
   }
 
   function checkWin(){
     if(!isGoalReached()) return;
-
-    // Hard mode: if stage is actually impossible, reaching goal shouldn't happen (but if it does, allow anyway)
     endStage({type:"solve"});
+  }
+
+  // ---------- Results / Flow ----------
+  function showModalCore(title, lines, buttons){
+    const body = el("div");
+    lines.forEach(t => {
+      const p = el("p");
+      p.innerHTML = t;
+      body.appendChild(p);
+    });
+    showModal(title, body, buttons);
   }
 
   function endStage({type, hardImpossibleDeclared=false}){
@@ -824,11 +950,10 @@
       moves: state.moves,
       timeMs: elapsed,
       timeText: msToMMSS(elapsed),
-      resultType: type, // 'solve' | 'declare-impossible'
+      resultType: type,
       declaredImpossible: hardImpossibleDeclared
     };
 
-    // Normal scoring
     if(state.mode === "normal"){
       const min = state.minMoves ?? bfsMinMoves(state.caps, state.goal);
       record.minMoves = min;
@@ -837,12 +962,8 @@
 
     state.records.push(record);
 
-    // stage complete UI
-    if(state.mode === "normal"){
-      showNormalStageClear(record);
-    }else{
-      showHardStageClear(record);
-    }
+    if(state.mode === "normal") showNormalStageClear(record);
+    else showHardStageClear(record);
   }
 
   function showNormalStageClear(rec){
@@ -855,11 +976,10 @@
     const box3 = el("div","box");
     box3.innerHTML = `<div class="label">클리어 시간</div><div class="val">${rec.timeText}</div>`;
     kpi.append(box1,box2,box3);
+    body.appendChild(kpi);
 
     const p = el("p");
     p.textContent = "잘 해결했습니다. 다음 문제로 넘어갑니다.";
-
-    body.appendChild(kpi);
     body.appendChild(p);
 
     const btnNext = el("button","good");
@@ -882,15 +1002,12 @@
     const box3 = el("div","box");
     box3.innerHTML = `<div class="label">진행 시간</div><div class="val">${rec.timeText}</div>`;
     kpi.append(box1,box2,box3);
+    body.appendChild(kpi);
 
     const p = el("p");
-    if(rec.resultType === "declare-impossible"){
-      p.textContent = "이 문제는 해결할 수 없는 문제였습니다. 올바르게 판단했습니다.";
-    }else{
-      p.textContent = "이 문제는 해결할 수 있는 문제였습니다. 해결 방법을 잘 찾아냈습니다.";
-    }
-
-    body.appendChild(kpi);
+    p.textContent = (rec.resultType === "declare-impossible")
+      ? "이 문제는 해결할 수 없는 문제였습니다. 올바르게 판단했습니다."
+      : "이 문제는 해결할 수 있는 문제였습니다. 해결 방법을 잘 찾아냈습니다.";
     body.appendChild(p);
 
     const btnNext = el("button","good");
@@ -903,26 +1020,14 @@
     showModal("완료", body, [btnNext]);
   }
 
-  function tierNameForStage(stageNumber){
-    for(const t of tiers){
-      if(stageNumber >= t.from && stageNumber <= t.to) return t.name;
-    }
-    return null;
-  }
-
   function goNextNormalOrTier(){
-    const stageNumber = state.idx + 1; // 1-based current stage
+    const stageNumber = state.idx + 1;
     const t = tiers.find(x => x.to === stageNumber);
-    if(t){
-      showTierSummary(t);
-      return;
-    }
-    // otherwise next stage
+    if(t){ showTierSummary(t); return; }
     if(state.idx < state.stages.length - 1){
       state.idx += 1;
       loadStage();
     }else{
-      // should not happen (tier end at 20)
       showFinalNormalSummary();
     }
   }
@@ -977,12 +1082,8 @@
     btnNext.textContent = (tier.to === 20) ? "최종 결과 보기" : "다음 단계로";
     btnNext.addEventListener("click", () => {
       closeModal();
-      if(tier.to === 20){
-        showFinalNormalSummary();
-      }else{
-        state.idx += 1;
-        loadStage();
-      }
+      if(tier.to === 20) showFinalNormalSummary();
+      else { state.idx += 1; loadStage(); }
     });
 
     showModal(`${tier.name} 완료!`, body, [btnNext]);
@@ -995,7 +1096,6 @@
       const avg = Math.round(subset.reduce((a,b)=>a+(b.score??0),0)/subset.length);
       return {name:t.name, avg, subset};
     });
-
     const overall = Math.round(tierScores.reduce((a,b)=>a+b.avg,0)/tierScores.length);
 
     const body = el("div");
@@ -1163,13 +1263,18 @@
     setScreen("start");
   }
 
-  // ---------- Hard: declare impossible + quiz ----------
+  // ---------- Hard declare impossible ----------
+  function parseTimeMMSS(mmss){
+    const [mm, ss] = mmss.split(':').map(x => parseInt(x,10));
+    if(Number.isFinite(mm) && Number.isFinite(ss)) return mm*60 + ss;
+    return 0;
+  }
+
   function openImpossibleQuiz(){
     if(!state.loopDetected) return;
+    stopTimer();
 
-    stopTimer(); // pause during quiz
     const body = el("div");
-
     const p = el("p");
     p.textContent = "이 문제가 불가능하다고 생각한 이유는 무엇인가요?";
     body.appendChild(p);
@@ -1183,8 +1288,8 @@
     const list = el("div");
     list.style.display = "grid";
     list.style.gap = "10px";
-
     let chosen = null;
+
     opts.forEach((text, idx) => {
       const b = el("button", idx===0 ? "primary" : "");
       b.textContent = text;
@@ -1198,7 +1303,6 @@
     const btnOk = el("button","good");
     btnOk.textContent = "판정하기";
     btnOk.addEventListener("click", () => {
-      // Determine if stage is actually impossible (by BFS)
       const solvableMin = bfsMinMoves(state.caps, state.goal);
       const actuallyImpossible = (solvableMin === null);
 
@@ -1213,22 +1317,19 @@
         closeModal();
         endStage({type:"declare-impossible", hardImpossibleDeclared:true});
       }else{
-        // fail: resume timer and continue
         closeModal();
-        state.startMs = Date.now() - (parseTimeMMSS(timeText.textContent)*1000); // keep approximate elapsed
+        // resume timer approximately
+        state.startMs = Date.now() - (parseTimeMMSS(timeText.textContent)*1000);
         startTimer();
-        // show brief message
+
+        const tmp = el("div");
         const b = el("div","banner bad");
         b.textContent = "판정이 맞지 않았습니다. 계속 시도해 보세요.";
-        // temporary modal
-        const tmp = el("div");
         tmp.appendChild(b);
+
         const btnContinue = el("button","good");
         btnContinue.textContent = "계속하기";
-        btnContinue.addEventListener("click", () => {
-          closeModal();
-          // resume exact timer is already running
-        });
+        btnContinue.addEventListener("click", () => closeModal());
         showModal("판정 실패", tmp, [btnContinue]);
       }
     });
@@ -1237,19 +1338,11 @@
     btnCancel.textContent = "취소";
     btnCancel.addEventListener("click", () => {
       closeModal();
-      // resume timer
       state.startMs = Date.now() - (parseTimeMMSS(timeText.textContent)*1000);
       startTimer();
     });
 
     showModal("불가능 판단", body, [btnOk, btnCancel]);
-  }
-
-  function parseTimeMMSS(mmss){
-    // "MM:SS"
-    const [mm, ss] = mmss.split(':').map(x => parseInt(x,10));
-    if(Number.isFinite(mm) && Number.isFinite(ss)) return mm*60 + ss;
-    return 0;
   }
 
   // ---------- Stage loading ----------
@@ -1258,18 +1351,12 @@
     state.caps = st.caps.slice();
     state.goal = st.goal;
 
-    // Normal minMoves computed upfront (internal, not shown)
     if(state.mode === "normal"){
       state.minMoves = bfsMinMoves(state.caps, state.goal);
-      // Normal stages must be solvable; if not, fallback gracefully
-      if(state.minMoves === null){
-        // keep playable but scoring will treat minMoves as moves
-        state.minMoves = null;
-      }
+      if(state.minMoves === null) state.minMoves = null;
     }else{
-      state.minMoves = null; // not needed
+      state.minMoves = null;
     }
-
     resetStageState();
   }
 
@@ -1293,7 +1380,6 @@
   });
 
   $("#btnBackToMenu").addEventListener("click", () => {
-    // confirm
     const body = el("div");
     const p = el("p");
     p.textContent = "메뉴로 돌아가면 현재 진행 중인 기록은 종료됩니다.";
@@ -1340,9 +1426,7 @@
     state.hintUsed += 1;
     const idx = Math.min(hintLevels.length, state.hintUsed) - 1;
     hintBox.textContent = hintLevels[idx] || hintLevels[hintLevels.length-1];
-    if(state.hintUsed >= hintLevels.length){
-      btnHint.disabled = true;
-    }
+    if(state.hintUsed >= hintLevels.length) btnHint.disabled = true;
   });
 
   btnDeclareImpossible.addEventListener("click", () => {
@@ -1351,7 +1435,7 @@
     openImpossibleQuiz();
   });
 
-  // initial screen
+  // init
   setScreen("start");
 })();
 </script>
