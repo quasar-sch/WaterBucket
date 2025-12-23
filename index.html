@@ -7,8 +7,6 @@
 <style>
   :root{
     --bg:#0b1220;
-    --panel:#101a2e;
-    --panel2:#0f1a33;
     --ink:#e7eefc;
     --muted:#b8c7f3;
     --line:rgba(255,255,255,.12);
@@ -19,8 +17,6 @@
 
     /* Jug visuals */
     --cup-stroke: rgba(255,255,255,.22);
-    --cup-fill: rgba(255,255,255,.06);
-    --cup-shadow: rgba(0,0,0,.22);
     --tick: rgba(255,255,255,.28);
     --tickText: rgba(231,238,252,.75);
     --waterTop: rgba(110,231,255,.85);
@@ -61,6 +57,7 @@
     font-size:12px;color:var(--muted);
   }
   .pill strong{color:var(--ink);font-weight:700}
+
   .grid{
     display:grid;
     grid-template-columns: 1.2fr .8fr;
@@ -114,6 +111,13 @@
   button.ghost{background: transparent;}
   button:disabled{opacity:.45; cursor:not-allowed;}
 
+  /* Toggle button state */
+  button.toggleOn{
+    border-color: rgba(110,231,255,.55);
+    background: rgba(110,231,255,.14);
+    box-shadow: 0 0 0 3px rgba(110,231,255,.10);
+  }
+
   /* Jugs layout */
   .jugs{
     display:flex; gap:12px; justify-content:center; align-items:flex-end;
@@ -121,7 +125,7 @@
     min-height:320px;
   }
   .jug{
-    width:140px; max-width:32vw;
+    width:150px; max-width:34vw;
     border:1px solid var(--line);
     background: rgba(255,255,255,.03);
     border-radius:16px;
@@ -144,7 +148,6 @@
 
   .jugSvgWrap{
     width:100%;
-    height:230px;
     display:flex;
     align-items:flex-end;
     justify-content:center;
@@ -152,6 +155,25 @@
     background: rgba(0,0,0,.10);
     border:1px solid rgba(255,255,255,.08);
     overflow:hidden;
+    /* 높이는 JS에서 용량에 따라 조정 */
+    height:230px;
+  }
+  .jugSvgWrap svg{display:block; width:100%; height:100%}
+
+  /* Water animation: waterGroup transform transitions */
+  .waterGroup{
+    transition: transform .38s ease;
+    will-change: transform;
+  }
+  /* wave subtle movement */
+  @keyframes waveDrift {
+    0%   { transform: translateX(0px); }
+    50%  { transform: translateX(2px); }
+    100% { transform: translateX(0px); }
+  }
+  .waveWiggle{
+    animation: waveDrift 4.2s ease-in-out infinite;
+    transform-origin: center;
   }
 
   .amt{
@@ -160,15 +182,7 @@
     font-size:12px; color:var(--muted);
   }
   .amt strong{color:var(--ink)}
-  .hintbox{
-    margin-top:10px;
-    border:1px dashed rgba(110,231,255,.28);
-    background: rgba(110,231,255,.06);
-    padding:10px 12px;border-radius:12px;
-    color:var(--muted);
-    font-size:13px; line-height:1.45;
-    min-height:46px;
-  }
+
   .status{
     display:flex;flex-wrap:wrap; gap:8px;
     font-size:12px; color:var(--muted);
@@ -194,6 +208,17 @@
     display:flex; align-items:center; justify-content:space-between;
     gap:10px; flex-wrap:wrap;
   }
+  .hintbox{
+    margin-top:10px;
+    border:1px dashed rgba(110,231,255,.28);
+    background: rgba(110,231,255,.06);
+    padding:10px 12px;border-radius:12px;
+    color:var(--muted);
+    font-size:13px; line-height:1.45;
+    min-height:46px;
+  }
+  .tiny{font-size:12px;color:var(--muted);line-height:1.45}
+  .divider{height:1px;background:var(--line);margin:14px 0}
 
   /* Modal */
   .modalOverlay{
@@ -258,7 +283,7 @@
     padding:12px 16px;
     border-top:1px solid var(--line);
   }
-  .tiny{font-size:12px;color:var(--muted);line-height:1.45}
+
   .start{padding:18px;}
   .modeCard{
     border:1px solid var(--line);
@@ -269,7 +294,6 @@
   .modeCard h3{margin:0 0 6px 0;font-size:15px}
   .modeCard p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
   .modeCard .btnrow{margin-top:12px}
-  .divider{height:1px;background:var(--line);margin:14px 0}
 </style>
 </head>
 <body>
@@ -283,7 +307,7 @@
           <h1>물통 미션 : 정확한 물의 양을 만들어라</h1>
           <p>물을 옮겨 목표한 양을 만들어 보세요.</p>
         </div>
-        <div class="pill"><strong>버전</strong> v1.1 (SVG)</div>
+        <div class="pill"><strong>버전</strong> v1.2 (모드토글+애니+비례크기)</div>
       </div>
 
       <div class="start">
@@ -350,7 +374,7 @@
         <div class="panel">
           <h2>물통</h2>
           <div class="banner" id="instructionBanner">
-            물통을 선택한 뒤 다른 통을 눌러 물을 옮기세요. 물은 한 통이 비거나, 다른 통이 가득 찰 때까지 옮겨집니다.
+            통을 누르면 선택됩니다. 물을 옮길 때는 <strong>옮기기 모드</strong>를 켠 뒤, 다른 통을 누르세요.
           </div>
 
           <div class="jugs" id="jugs"></div>
@@ -373,7 +397,12 @@
           <div class="btnrow">
             <button id="btnFill" class="primary">채우기</button>
             <button id="btnEmpty">비우기</button>
+            <button id="btnPourMode" class="">옮기기 모드: 꺼짐</button>
             <button id="btnDeclareImpossible" class="bad" style="display:none" disabled>이 문제는 불가능하다고 판단하기</button>
+          </div>
+
+          <div class="banner" id="modeBanner" style="margin-top:12px">
+            현재 모드: <strong id="modeStateText">선택</strong>
           </div>
 
           <div id="normalHintArea" style="margin-top:12px; display:none">
@@ -393,7 +422,7 @@
           <div class="divider"></div>
           <div class="tiny">
             • 이동은 <strong>채우기 / 비우기 / 옮기기</strong> 모두 1회로 계산됩니다.<br/>
-            • Normal은 단계가 끝날 때 결과를 확인할 수 있습니다.
+            • 통의 크기는 용량에 따라 조금씩 다릅니다.
           </div>
         </div>
       </div>
@@ -418,11 +447,6 @@
 (() => {
   // ---------- Utility ----------
   const $ = (sel) => document.querySelector(sel);
-  const el = (tag, cls) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    return n;
-  };
   const pad2 = (n) => String(n).padStart(2,'0');
   const msToMMSS = (ms) => {
     const s = Math.max(0, Math.floor(ms/1000));
@@ -430,6 +454,7 @@
     const ss = s%60;
     return `${pad2(mm)}:${pad2(ss)}`;
   };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   // ---------- BFS ----------
   function bfsMinMoves(capacities, goal){
@@ -549,7 +574,9 @@
     loopDetected: false,
     minMoves: null,
     hintUsed: 0,
-    records: []
+    records: [],
+    pourMode: false,
+    jugUI: [] // per jug: refs to update without rebuilding
   };
 
   // ---------- DOM ----------
@@ -571,12 +598,20 @@
   const hintBox = $("#hintBox");
   const btnHint = $("#btnHint");
 
+  const btnPourMode = $("#btnPourMode");
+  const modeStateText = $("#modeStateText");
+
   const modalOverlay = $("#modalOverlay");
   const modalTitle = $("#modalTitle");
   const modalBody = $("#modalBody");
   const modalFooter = $("#modalFooter");
 
   // ---------- Modal helpers ----------
+  function el(tag, cls){
+    const n = document.createElement(tag);
+    if(cls) n.className = cls;
+    return n;
+  }
   function showModal(title, bodyNode, footerButtons){
     modalTitle.textContent = title;
     modalBody.innerHTML = "";
@@ -600,129 +635,7 @@
     }
   }
 
-  // ---------- SVG Jug builder ----------
-  function buildJugSvg({id, cap, amt, selected}){
-    // cup inner area (for clipping)
-    const w = 120, h = 210;
-    const innerX = 22, innerY = 22, innerW = 76, innerH = 160;
-    const waterH = (amt / cap) * innerH;
-    const waterY = innerY + (innerH - waterH);
-
-    // ticks: minimal 0 / mid / max
-    const tickSideX = innerX + innerW + 6; // right side
-    const tick0Y = innerY + innerH;
-    const tickMidY = innerY + innerH/2;
-    const tickMaxY = innerY;
-
-    // water wave path (very subtle)
-    const waveAmp = 2.2;
-    const wave = `M ${innerX} ${waterY}
-      C ${innerX+innerW*0.25} ${waterY-waveAmp}, ${innerX+innerW*0.45} ${waterY+waveAmp}, ${innerX+innerW*0.60} ${waterY}
-      C ${innerX+innerW*0.75} ${waterY-waveAmp}, ${innerX+innerW*0.88} ${waterY+waveAmp}, ${innerX+innerW} ${waterY}
-      L ${innerX+innerW} ${innerY+innerH}
-      L ${innerX} ${innerY+innerH}
-      Z`;
-
-    const selGlow = selected
-      ? `<filter id="glow-${id}" x="-50%" y="-50%" width="200%" height="200%">
-           <feGaussianBlur stdDeviation="2.4" result="blur"/>
-           <feColorMatrix in="blur" type="matrix"
-             values="0 0 0 0 0.43
-                     0 0 0 0 0.91
-                     0 0 0 0 1
-                     0 0 0 .35 0" result="blue"/>
-           <feMerge><feMergeNode in="blue"/><feMergeNode in="SourceGraphic"/></feMerge>
-         </filter>`
-      : "";
-
-    return `
-      <svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" aria-hidden="true">
-        <defs>
-          ${selGlow}
-          <linearGradient id="cupGrad-${id}" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="rgba(255,255,255,.08)"/>
-            <stop offset="0.35" stop-color="rgba(255,255,255,.03)"/>
-            <stop offset="0.7" stop-color="rgba(255,255,255,.07)"/>
-            <stop offset="1" stop-color="rgba(255,255,255,.04)"/>
-          </linearGradient>
-
-          <linearGradient id="waterGrad-${id}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="var(--waterTop)"/>
-            <stop offset="1" stop-color="var(--waterBottom)"/>
-          </linearGradient>
-
-          <clipPath id="cupClip-${id}">
-            <!-- inner cavity -->
-            <rect x="${innerX}" y="${innerY}" width="${innerW}" height="${innerH}" rx="10" ry="10"></rect>
-          </clipPath>
-        </defs>
-
-        <!-- subtle base shadow -->
-        <ellipse cx="${w/2}" cy="${h-10}" rx="36" ry="8" fill="rgba(0,0,0,.25)"></ellipse>
-
-        <!-- cup body -->
-        <g ${selected ? `filter="url(#glow-${id})"` : ""}>
-          <!-- outer cup -->
-          <path d="M 18 20
-                   Q 18 10 28 10
-                   L 92 10
-                   Q 102 10 102 20
-                   L 106 184
-                   Q 106 198 92 198
-                   L 28 198
-                   Q 14 198 14 184
-                   Z"
-                fill="url(#cupGrad-${id})"
-                stroke="var(--cup-stroke)" stroke-width="1.2" />
-
-          <!-- rim -->
-          <path d="M 26 10 L 94 10
-                   Q 102 10 102 18
-                   L 102 22
-                   Q 102 14 94 14
-                   L 26 14
-                   Q 18 14 18 22
-                   L 18 18
-                   Q 18 10 26 10 Z"
-                fill="rgba(255,255,255,.10)" stroke="rgba(255,255,255,.18)" stroke-width=".6"/>
-
-          <!-- base thickness -->
-          <rect x="18" y="186" width="88" height="14" rx="10" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.12)" stroke-width=".6"></rect>
-
-          <!-- inner wall tint -->
-          <rect x="${innerX}" y="${innerY}" width="${innerW}" height="${innerH}" rx="10"
-                fill="rgba(0,0,0,.18)" stroke="rgba(255,255,255,.10)" stroke-width=".6"></rect>
-
-          <!-- highlight strip -->
-          <rect x="28" y="22" width="10" height="164" rx="6" fill="rgba(255,255,255,.07)"></rect>
-        </g>
-
-        <!-- water (clipped to inner cavity) -->
-        <g clip-path="url(#cupClip-${id})">
-          <!-- animated water body -->
-          <path d="${wave}" fill="url(#waterGrad-${id})" style="transition: d .25s ease;"></path>
-          <!-- water edge highlight -->
-          <path d="M ${innerX} ${waterY}
-                   C ${innerX+innerW*0.25} ${waterY-waveAmp}, ${innerX+innerW*0.45} ${waterY+waveAmp}, ${innerX+innerW*0.60} ${waterY}
-                   C ${innerX+innerW*0.75} ${waterY-waveAmp}, ${innerX+innerW*0.88} ${waterY+waveAmp}, ${innerX+innerW} ${waterY}"
-                fill="none" stroke="var(--waterEdge)" stroke-width="1" opacity=".65"></path>
-        </g>
-
-        <!-- minimal ticks -->
-        <g opacity=".95">
-          <line x1="${tickSideX}" y1="${tickMaxY}" x2="${tickSideX+10}" y2="${tickMaxY}" stroke="var(--tick)" stroke-width="1"/>
-          <line x1="${tickSideX}" y1="${tickMidY}" x2="${tickSideX+8}" y2="${tickMidY}" stroke="var(--tick)" stroke-width="1"/>
-          <line x1="${tickSideX}" y1="${tick0Y}" x2="${tickSideX+10}" y2="${tick0Y}" stroke="var(--tick)" stroke-width="1"/>
-
-          <text x="${tickSideX+12}" y="${tickMaxY+4}" font-size="10" fill="var(--tickText)">${cap}</text>
-          <text x="${tickSideX+12}" y="${tickMidY+4}" font-size="10" fill="var(--tickText)">${Math.round(cap/2)}</text>
-          <text x="${tickSideX+12}" y="${tick0Y+4}" font-size="10" fill="var(--tickText)">0</text>
-        </g>
-      </svg>
-    `;
-  }
-
-  // ---------- UI ----------
+  // ---------- Timer ----------
   function stopTimer(){
     if(state.timerId){
       clearInterval(state.timerId);
@@ -738,6 +651,286 @@
     timeText.textContent = "00:00";
   }
 
+  // ---------- SVG jug template + refs ----------
+  function createJugElement(jugIndex, cap){
+    // Base geometry
+    const W = 120, H = 210;
+    const innerX = 22, innerY = 22, innerW = 76, innerH = 160;
+
+    // ticks: 0 / mid / max (right side)
+    const tickSideX = innerX + innerW + 6;
+    const tick0Y = innerY + innerH;
+    const tickMidY = innerY + innerH/2;
+    const tickMaxY = innerY;
+
+    const jugCard = el("div","jug");
+    jugCard.setAttribute("role","button");
+    jugCard.setAttribute("tabindex","0");
+
+    const head = el("div","cap");
+    head.innerHTML = `<span>${jugIndex+1}번 통</span><strong>${cap}L</strong>`;
+
+    const svgWrap = el("div","jugSvgWrap");
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("width","100%");
+    svg.setAttribute("height","100%");
+
+    const defs = document.createElementNS("http://www.w3.org/2000/svg","defs");
+
+    const id = `s${state.idx}_j${jugIndex}_${Math.random().toString(16).slice(2)}`;
+
+    // gradients
+    const cupGrad = document.createElementNS("http://www.w3.org/2000/svg","linearGradient");
+    cupGrad.setAttribute("id", `cupGrad-${id}`);
+    cupGrad.setAttribute("x1","0"); cupGrad.setAttribute("y1","0");
+    cupGrad.setAttribute("x2","1"); cupGrad.setAttribute("y2","0");
+    cupGrad.innerHTML = `
+      <stop offset="0" stop-color="rgba(255,255,255,.08)"/>
+      <stop offset="0.35" stop-color="rgba(255,255,255,.03)"/>
+      <stop offset="0.7" stop-color="rgba(255,255,255,.07)"/>
+      <stop offset="1" stop-color="rgba(255,255,255,.04)"/>
+    `;
+
+    const waterGrad = document.createElementNS("http://www.w3.org/2000/svg","linearGradient");
+    waterGrad.setAttribute("id", `waterGrad-${id}`);
+    waterGrad.setAttribute("x1","0"); waterGrad.setAttribute("y1","0");
+    waterGrad.setAttribute("x2","0"); waterGrad.setAttribute("y2","1");
+    waterGrad.innerHTML = `
+      <stop offset="0" stop-color="var(--waterTop)"/>
+      <stop offset="1" stop-color="var(--waterBottom)"/>
+    `;
+
+    const clip = document.createElementNS("http://www.w3.org/2000/svg","clipPath");
+    clip.setAttribute("id", `cupClip-${id}`);
+    const innerRect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    innerRect.setAttribute("x", innerX);
+    innerRect.setAttribute("y", innerY);
+    innerRect.setAttribute("width", innerW);
+    innerRect.setAttribute("height", innerH);
+    innerRect.setAttribute("rx","10");
+    clip.appendChild(innerRect);
+
+    defs.appendChild(cupGrad);
+    defs.appendChild(waterGrad);
+    defs.appendChild(clip);
+    svg.appendChild(defs);
+
+    // base shadow
+    const baseShadow = document.createElementNS("http://www.w3.org/2000/svg","ellipse");
+    baseShadow.setAttribute("cx", W/2);
+    baseShadow.setAttribute("cy", H-10);
+    baseShadow.setAttribute("rx","36");
+    baseShadow.setAttribute("ry","8");
+    baseShadow.setAttribute("fill","rgba(0,0,0,.25)");
+    svg.appendChild(baseShadow);
+
+    // cup body group
+    const cupG = document.createElementNS("http://www.w3.org/2000/svg","g");
+
+    const outer = document.createElementNS("http://www.w3.org/2000/svg","path");
+    outer.setAttribute("d",
+      "M 18 20 Q 18 10 28 10 L 92 10 Q 102 10 102 20 L 106 184 Q 106 198 92 198 L 28 198 Q 14 198 14 184 Z"
+    );
+    outer.setAttribute("fill", `url(#cupGrad-${id})`);
+    outer.setAttribute("stroke", "var(--cup-stroke)");
+    outer.setAttribute("stroke-width","1.2");
+    cupG.appendChild(outer);
+
+    const rim = document.createElementNS("http://www.w3.org/2000/svg","path");
+    rim.setAttribute("d",
+      "M 26 10 L 94 10 Q 102 10 102 18 L 102 22 Q 102 14 94 14 L 26 14 Q 18 14 18 22 L 18 18 Q 18 10 26 10 Z"
+    );
+    rim.setAttribute("fill","rgba(255,255,255,.10)");
+    rim.setAttribute("stroke","rgba(255,255,255,.18)");
+    rim.setAttribute("stroke-width",".6");
+    cupG.appendChild(rim);
+
+    const base = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    base.setAttribute("x","18"); base.setAttribute("y","186");
+    base.setAttribute("width","88"); base.setAttribute("height","14");
+    base.setAttribute("rx","10");
+    base.setAttribute("fill","rgba(255,255,255,.07)");
+    base.setAttribute("stroke","rgba(255,255,255,.12)");
+    base.setAttribute("stroke-width",".6");
+    cupG.appendChild(base);
+
+    const wall = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    wall.setAttribute("x", innerX);
+    wall.setAttribute("y", innerY);
+    wall.setAttribute("width", innerW);
+    wall.setAttribute("height", innerH);
+    wall.setAttribute("rx","10");
+    wall.setAttribute("fill","rgba(0,0,0,.18)");
+    wall.setAttribute("stroke","rgba(255,255,255,.10)");
+    wall.setAttribute("stroke-width",".6");
+    cupG.appendChild(wall);
+
+    const hi = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    hi.setAttribute("x","28"); hi.setAttribute("y","22");
+    hi.setAttribute("width","10"); hi.setAttribute("height","164");
+    hi.setAttribute("rx","6");
+    hi.setAttribute("fill","rgba(255,255,255,.07)");
+    cupG.appendChild(hi);
+
+    svg.appendChild(cupG);
+
+    // water group (clipped)
+    const waterClipG = document.createElementNS("http://www.w3.org/2000/svg","g");
+    waterClipG.setAttribute("clip-path", `url(#cupClip-${id})`);
+
+    // waterGroup that moves up/down by transform (for animation)
+    const waterGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
+    waterGroup.classList.add("waterGroup");
+
+    // big water rect fills entire inner; we move group downward for empty space
+    const waterRect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    waterRect.setAttribute("x", innerX);
+    waterRect.setAttribute("y", innerY);
+    waterRect.setAttribute("width", innerW);
+    waterRect.setAttribute("height", innerH);
+    waterRect.setAttribute("fill", `url(#waterGrad-${id})`);
+    waterGroup.appendChild(waterRect);
+
+    // wave group (wiggle) - placed at the top of water; we update its Y
+    const waveGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
+    waveGroup.classList.add("waveWiggle");
+
+    const wavePath = document.createElementNS("http://www.w3.org/2000/svg","path");
+    wavePath.setAttribute("fill","none");
+    wavePath.setAttribute("stroke","var(--waterEdge)");
+    wavePath.setAttribute("stroke-width","1");
+    wavePath.setAttribute("opacity",".65");
+    waveGroup.appendChild(wavePath);
+
+    waterClipG.appendChild(waterGroup);
+    waterClipG.appendChild(waveGroup);
+    svg.appendChild(waterClipG);
+
+    // ticks
+    const tickG = document.createElementNS("http://www.w3.org/2000/svg","g");
+    tickG.setAttribute("opacity",".95");
+
+    function tickLine(y, len){
+      const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
+      ln.setAttribute("x1", tickSideX);
+      ln.setAttribute("y1", y);
+      ln.setAttribute("x2", tickSideX + len);
+      ln.setAttribute("y2", y);
+      ln.setAttribute("stroke","var(--tick)");
+      ln.setAttribute("stroke-width","1");
+      return ln;
+    }
+    tickG.appendChild(tickLine(tickMaxY, 10));
+    tickG.appendChild(tickLine(tickMidY, 8));
+    tickG.appendChild(tickLine(tick0Y, 10));
+
+    function tickText(y, text){
+      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.setAttribute("x", tickSideX + 12);
+      t.setAttribute("y", y + 4);
+      t.setAttribute("font-size","10");
+      t.setAttribute("fill","var(--tickText)");
+      t.textContent = text;
+      return t;
+    }
+    tickG.appendChild(tickText(tickMaxY, String(cap)));
+    tickG.appendChild(tickText(tickMidY, String(Math.round(cap/2))));
+    tickG.appendChild(tickText(tick0Y, "0"));
+    svg.appendChild(tickG);
+
+    svgWrap.appendChild(svg);
+
+    const amt = el("div","amt");
+    const amtLeft = el("span"); amtLeft.textContent = "현재";
+    const amtStrong = el("strong"); amtStrong.textContent = "0L";
+    amt.appendChild(amtLeft);
+    amt.appendChild(amtStrong);
+
+    jugCard.appendChild(head);
+    jugCard.appendChild(svgWrap);
+    jugCard.appendChild(amt);
+
+    // interactions
+    jugCard.addEventListener("click", () => onJugClick(jugIndex));
+    jugCard.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.key === " ") { e.preventDefault(); onJugClick(jugIndex); }
+    });
+
+    // store refs for updates
+    const refs = {
+      jugCard,
+      svgWrap,
+      amtStrong,
+      waterGroup,
+      wavePath,
+      waveGroup,
+      geom: { innerX, innerY, innerW, innerH },
+    };
+
+    // initialize wave path once; y will be set by update
+    return refs;
+  }
+
+  function setWavePath(refs, waterTopY){
+    const { innerX, innerW } = refs.geom;
+    const amp = 2.2;
+    const x0 = innerX, x1 = innerX + innerW;
+    const c1 = innerX + innerW*0.25;
+    const c2 = innerX + innerW*0.45;
+    const c3 = innerX + innerW*0.60;
+    const c4 = innerX + innerW*0.75;
+    const c5 = innerX + innerW*0.88;
+
+    const d = `M ${x0} ${waterTopY}
+      C ${c1} ${waterTopY-amp}, ${c2} ${waterTopY+amp}, ${c3} ${waterTopY}
+      C ${c4} ${waterTopY-amp}, ${c5} ${waterTopY+amp}, ${x1} ${waterTopY}`;
+    refs.wavePath.setAttribute("d", d);
+
+    // position waveGroup (so its own wiggle doesn't move vertically)
+    refs.waveGroup.setAttribute("transform", `translate(0,0)`);
+  }
+
+  function updateWaterVisual(jugIndex){
+    const cap = state.caps[jugIndex];
+    const amt = state.amounts[jugIndex];
+    const refs = state.jugUI[jugIndex];
+
+    refs.amtStrong.textContent = `${amt}L`;
+
+    const { innerY, innerH } = refs.geom;
+    const waterH = (amt / cap) * innerH;
+    const offset = innerH - waterH; // translate down when less water
+    refs.waterGroup.style.transform = `translate(0px, ${offset}px)`;
+
+    // wave should sit at top of water (clamped within inner)
+    const waterTopY = innerY + offset;
+    setWavePath(refs, waterTopY);
+  }
+
+  // ---------- Capacity-proportional jug size ----------
+  function applyJugSizing(){
+    const caps = state.caps.slice();
+    const minC = Math.min(...caps);
+    const maxC = Math.max(...caps);
+
+    // base height in px
+    const base = 230; // matches CSS default
+    const minScale = 0.80;
+    const maxScale = 1.38;
+
+    for(let i=0;i<caps.length;i++){
+      let t = 0;
+      if(maxC !== minC) t = (caps[i] - minC) / (maxC - minC);
+      const scale = minScale + (maxScale - minScale) * t;
+      const h = Math.round(base * scale);
+
+      state.jugUI[i].svgWrap.style.height = `${h}px`;
+    }
+  }
+
+  // ---------- Stage state ----------
   function resetStageState(){
     state.amounts = Array(state.caps.length).fill(0);
     state.selected = null;
@@ -746,23 +939,46 @@
     state.loopSet = new Set();
     state.loopDetected = false;
     loopBanner.style.display = "none";
+
+    // pour mode resets OFF at stage start (안전)
+    state.pourMode = false;
+    updatePourModeUI();
+
     btnDeclareImpossible.disabled = true;
     btnDeclareImpossible.style.display = (state.mode === "hard") ? "" : "none";
+
     state.loopSet.add(state.amounts.join(','));
     hintBox.textContent = "힌트가 여기에 표시됩니다.";
     btnHint.disabled = false;
 
     state.startMs = Date.now();
     startTimer();
-    render();
+
+    // build jug UI once per stage
+    buildJugUI();
+
+    renderTopUI();
+    renderModeSections();
   }
 
-  function render(){
+  function renderTopUI(){
     modeTitle.textContent = state.mode === "normal" ? "Normal" : "Hard";
     stageNo.textContent = String(state.idx + 1);
     goalText.textContent = `${state.goal}L`;
     movesText.textContent = String(state.moves);
+    selectInfo.textContent = state.selected == null
+      ? "선택: 없음"
+      : `선택: ${state.selected+1}번 통 (${state.caps[state.selected]}L)`;
 
+    if(state.mode === "hard"){
+      loopBanner.style.display = state.loopDetected ? "" : "none";
+      btnDeclareImpossible.disabled = !state.loopDetected;
+    }else{
+      loopBanner.style.display = "none";
+    }
+  }
+
+  function renderModeSections(){
     if(state.mode === "normal"){
       stageDesc.textContent = "목표한 물의 양을 만들어 보세요. 이동 횟수를 줄일수록 점수가 높아집니다.";
       normalHintArea.style.display = "";
@@ -774,95 +990,57 @@
       hardNoteArea.style.display = "";
       btnDeclareImpossible.style.display = "";
     }
+  }
 
+  function buildJugUI(){
+    state.jugUI = [];
+    jugsEl.innerHTML = "";
+    state.caps.forEach((cap, i) => {
+      const refs = createJugElement(i, cap);
+      state.jugUI.push(refs);
+      jugsEl.appendChild(refs.jugCard);
+    });
+
+    applyJugSizing();
+
+    // initial water visuals
+    for(let i=0;i<state.caps.length;i++){
+      updateWaterVisual(i);
+      // selection class init
+      state.jugUI[i].jugCard.classList.toggle("selected", state.selected === i);
+    }
+  }
+
+  function updateSelectionUI(){
+    for(let i=0;i<state.jugUI.length;i++){
+      state.jugUI[i].jugCard.classList.toggle("selected", state.selected === i);
+    }
     selectInfo.textContent = state.selected == null
       ? "선택: 없음"
       : `선택: ${state.selected+1}번 통 (${state.caps[state.selected]}L)`;
-
-    // loop banner
-    if(state.mode === "hard"){
-      loopBanner.style.display = state.loopDetected ? "" : "none";
-      btnDeclareImpossible.disabled = !state.loopDetected;
-    }else{
-      loopBanner.style.display = "none";
-    }
-
-    // build jugs
-    jugsEl.innerHTML = "";
-    state.caps.forEach((cap, i) => {
-      const jug = el("div", "jug" + (state.selected===i ? " selected" : ""));
-      jug.setAttribute("role","button");
-      jug.setAttribute("tabindex","0");
-
-      const head = el("div","cap");
-      head.innerHTML = `<span>${i+1}번 통</span><strong>${cap}L</strong>`;
-
-      const svgWrap = el("div","jugSvgWrap");
-      svgWrap.innerHTML = buildJugSvg({
-        id: `s${state.idx}_j${i}`,
-        cap,
-        amt: state.amounts[i],
-        selected: state.selected===i
-      });
-
-      const amt = el("div","amt");
-      amt.innerHTML = `<span>현재</span><strong>${state.amounts[i]}L</strong>`;
-
-      jug.appendChild(head);
-      jug.appendChild(svgWrap);
-      jug.appendChild(amt);
-
-      jug.addEventListener("click", () => onJugClick(i));
-      jug.addEventListener("keydown", (e) => {
-        if(e.key === "Enter" || e.key === " ") { e.preventDefault(); onJugClick(i); }
-      });
-
-      jugsEl.appendChild(jug);
-    });
   }
 
-  // ---------- Game logic (selection fix included) ----------
+  function updatePourModeUI(){
+    modeStateText.textContent = state.pourMode ? "옮기기" : "선택";
+    btnPourMode.textContent = `옮기기 모드: ${state.pourMode ? "켜짐" : "꺼짐"}`;
+    btnPourMode.classList.toggle("toggleOn", state.pourMode);
+  }
+
+  // ---------- Game logic ----------
   function addMoveAndCheckLoop(){
     state.moves += 1;
+    movesText.textContent = String(state.moves);
+
     const key = state.amounts.join(',');
     if(state.loopSet.has(key)){
       state.loopDetected = true;
     }else{
       state.loopSet.add(key);
     }
-    movesText.textContent = String(state.moves);
+
     if(state.mode === "hard"){
       loopBanner.style.display = state.loopDetected ? "" : "none";
       btnDeclareImpossible.disabled = !state.loopDetected;
-    }
-  }
-
-  function onJugClick(i){
-    // 1) If nothing selected: select i
-    if(state.selected == null){
-      state.selected = i;
-      render();
-      return;
-    }
-
-    // 2) If same jug: keep selected (no-op)
-    if(state.selected === i){
-      render();
-      return;
-    }
-
-    // 3) If different jug: try to pour; if cannot, just switch selection
-    const from = state.selected;
-    const to = i;
-
-    const canPour = canPourAmount(from, to) > 0;
-
-    if(canPour){
-      pour(from, to); // pour handles move count, loop, win, and selection
-    }else{
-      // IMPORTANT FIX: even if pour is impossible, selection should move
-      state.selected = to;
-      render();
     }
   }
 
@@ -873,13 +1051,62 @@
     return Math.min(state.amounts[from], capTo - state.amounts[to]);
   }
 
+  function onJugClick(i){
+    // 클릭은 기본적으로 "선택"
+    if(state.selected == null){
+      state.selected = i;
+      updateSelectionUI();
+      return;
+    }
+
+    if(state.selected === i){
+      // same jug: keep selected
+      updateSelectionUI();
+      return;
+    }
+
+    if(!state.pourMode){
+      // 선택 모드: 무조건 선택만 이동
+      state.selected = i;
+      updateSelectionUI();
+      return;
+    }
+
+    // 옮기기 모드 ON: 선택된 통에서 i로 옮기기 시도
+    const from = state.selected;
+    const to = i;
+    const amount = canPourAmount(from, to);
+
+    if(amount > 0){
+      // perform pour
+      state.amounts[from] -= amount;
+      state.amounts[to] += amount;
+      addMoveAndCheckLoop();
+
+      // after pour, select destination (연속 작업 편의)
+      state.selected = to;
+      updateSelectionUI();
+
+      // update visuals (애니메이션은 CSS transition이 담당)
+      updateWaterVisual(from);
+      updateWaterVisual(to);
+
+      checkWin();
+    }else{
+      // 옮기기 불가면 선택만 이동(실수 방지 + 흐름 유지)
+      state.selected = to;
+      updateSelectionUI();
+    }
+  }
+
   function fillSelected(){
     if(state.selected == null) return;
     const i = state.selected;
     if(state.amounts[i] === state.caps[i]) return;
+
     state.amounts[i] = state.caps[i];
     addMoveAndCheckLoop();
-    render();
+    updateWaterVisual(i);
     checkWin();
   }
 
@@ -887,30 +1114,16 @@
     if(state.selected == null) return;
     const i = state.selected;
     if(state.amounts[i] === 0) return;
+
     state.amounts[i] = 0;
     addMoveAndCheckLoop();
-    render();
+    updateWaterVisual(i);
     checkWin();
   }
 
-  function pour(from, to){
-    const amount = canPourAmount(from, to);
-    if(amount <= 0){
-      // if somehow called, still switch selection (UX rule)
-      state.selected = to;
-      render();
-      return;
-    }
-    state.amounts[from] -= amount;
-    state.amounts[to] += amount;
-    addMoveAndCheckLoop();
-    // after pour, select destination
-    state.selected = to;
-    render();
-    checkWin();
+  function isGoalReached(){
+    return state.amounts.some(v => v === state.goal);
   }
-
-  function isGoalReached(){ return state.amounts.some(v => v === state.goal); }
 
   function computeNormalScore(moves, ms, minMoves){
     const base = 100;
@@ -922,22 +1135,7 @@
     return Math.max(0, base - movePenalty - timePenalty);
   }
 
-  function checkWin(){
-    if(!isGoalReached()) return;
-    endStage({type:"solve"});
-  }
-
   // ---------- Results / Flow ----------
-  function showModalCore(title, lines, buttons){
-    const body = el("div");
-    lines.forEach(t => {
-      const p = el("p");
-      p.innerHTML = t;
-      body.appendChild(p);
-    });
-    showModal(title, body, buttons);
-  }
-
   function endStage({type, hardImpossibleDeclared=false}){
     stopTimer();
     const elapsed = Date.now() - state.startMs;
@@ -1131,13 +1329,6 @@
     `;
     body.appendChild(table);
 
-    const btnDetails = el("button","primary");
-    btnDetails.textContent = "전체 스테이지 기록 보기";
-    btnDetails.addEventListener("click", () => {
-      closeModal();
-      showAllNormalDetails();
-    });
-
     const btnMenu = el("button","ghost");
     btnMenu.textContent = "메뉴로";
     btnMenu.addEventListener("click", () => {
@@ -1145,51 +1336,7 @@
       resetToMenu();
     });
 
-    showModal("Normal 최종 결과", body, [btnDetails, btnMenu]);
-  }
-
-  function showAllNormalDetails(){
-    const rows = state.records.filter(r => r.mode === "normal");
-    const body = el("div");
-    const p = el("p");
-    p.textContent = "스테이지별 이동 횟수와 클리어 시간, 점수입니다.";
-    body.appendChild(p);
-
-    const table = el("table");
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th>스테이지</th>
-          <th>통(용량)</th>
-          <th>목표</th>
-          <th>이동</th>
-          <th>시간</th>
-          <th>점수</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(r => `
-          <tr>
-            <td>${r.stageIndex+1}</td>
-            <td>${r.caps.join(", ")}L</td>
-            <td>${r.goal}L</td>
-            <td>${r.moves}회</td>
-            <td>${r.timeText}</td>
-            <td>${r.score} / 100</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    `;
-    body.appendChild(table);
-
-    const btnMenu = el("button","ghost");
-    btnMenu.textContent = "메뉴로";
-    btnMenu.addEventListener("click", () => {
-      closeModal();
-      resetToMenu();
-    });
-
-    showModal("전체 기록", body, [btnMenu]);
+    showModal("Normal 최종 결과", body, [btnMenu]);
   }
 
   function goNextHardOrEnd(){
@@ -1218,33 +1365,6 @@
     p.textContent = "Hard 모드는 정답을 만드는 것뿐 아니라, 가능한지 불가능한지 판단하는 힘이 중요합니다.";
     body.appendChild(p);
 
-    const table = el("table");
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th>스테이지</th>
-          <th>통(용량)</th>
-          <th>목표</th>
-          <th>결과</th>
-          <th>이동</th>
-          <th>시간</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(r => `
-          <tr>
-            <td>${r.stageIndex+1}</td>
-            <td>${r.caps.join(", ")}L</td>
-            <td>${r.goal}L</td>
-            <td>${r.resultType === "declare-impossible" ? "불가능 판단" : "목표 달성"}</td>
-            <td>${r.moves}회</td>
-            <td>${r.timeText}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    `;
-    body.appendChild(table);
-
     const btnMenu = el("button","ghost");
     btnMenu.textContent = "메뉴로";
     btnMenu.addEventListener("click", () => {
@@ -1253,14 +1373,6 @@
     });
 
     showModal("Hard 결과", body, [btnMenu]);
-  }
-
-  function resetToMenu(){
-    state.mode = null;
-    state.stages = [];
-    state.idx = 0;
-    state.records = [];
-    setScreen("start");
   }
 
   // ---------- Hard declare impossible ----------
@@ -1318,7 +1430,6 @@
         endStage({type:"declare-impossible", hardImpossibleDeclared:true});
       }else{
         closeModal();
-        // resume timer approximately
         state.startMs = Date.now() - (parseTimeMMSS(timeText.textContent)*1000);
         startTimer();
 
@@ -1345,6 +1456,12 @@
     showModal("불가능 판단", body, [btnOk, btnCancel]);
   }
 
+  // ---------- Win ----------
+  function checkWin(){
+    if(!isGoalReached()) return;
+    endStage({type:"solve"});
+  }
+
   // ---------- Stage loading ----------
   function loadStage(){
     const st = state.stages[state.idx];
@@ -1358,6 +1475,14 @@
       state.minMoves = null;
     }
     resetStageState();
+  }
+
+  function resetToMenu(){
+    state.mode = null;
+    state.stages = [];
+    state.idx = 0;
+    state.records = [];
+    setScreen("start");
   }
 
   // ---------- Events ----------
@@ -1419,8 +1544,19 @@
     showModal("스테이지 리셋", body, [btnNo, btnYes]);
   });
 
-  $("#btnFill").addEventListener("click", fillSelected);
-  $("#btnEmpty").addEventListener("click", emptySelected);
+  $("#btnFill").addEventListener("click", () => {
+    fillSelected();
+    renderTopUI();
+  });
+  $("#btnEmpty").addEventListener("click", () => {
+    emptySelected();
+    renderTopUI();
+  });
+
+  btnPourMode.addEventListener("click", () => {
+    state.pourMode = !state.pourMode;
+    updatePourModeUI();
+  });
 
   btnHint.addEventListener("click", () => {
     state.hintUsed += 1;
@@ -1435,7 +1571,7 @@
     openImpossibleQuiz();
   });
 
-  // init
+  // initial
   setScreen("start");
 })();
 </script>
