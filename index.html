@@ -1,0 +1,1359 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>물통 미션: 정확한 물의 양 만들기</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#101a2e;
+    --panel2:#0f1a33;
+    --ink:#e7eefc;
+    --muted:#b8c7f3;
+    --line:rgba(255,255,255,.12);
+    --accent:#6ee7ff;
+    --good:#22c55e;
+    --warn:#fbbf24;
+    --bad:#fb7185;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 20% 10%, rgba(110,231,255,.10), transparent 55%),
+                radial-gradient(900px 500px at 80% 15%, rgba(34,197,94,.08), transparent 55%),
+                radial-gradient(1000px 600px at 50% 95%, rgba(251,113,133,.10), transparent 60%),
+                var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:22px}
+  .card{
+    background: linear-gradient(180deg, rgba(16,26,46,.92), rgba(12,20,40,.92));
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.35);
+    overflow:hidden;
+  }
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 18px;border-bottom:1px solid var(--line);
+  }
+  .title{
+    display:flex;flex-direction:column;gap:2px
+  }
+  .title h1{margin:0;font-size:18px;letter-spacing:.2px}
+  .title p{margin:0;color:var(--muted);font-size:12px;line-height:1.35}
+  .pill{
+    display:inline-flex;gap:8px;align-items:center;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    padding:8px 10px;border-radius:999px;
+    font-size:12px;color:var(--muted);
+  }
+  .pill strong{color:var(--ink);font-weight:700}
+  .grid{
+    display:grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap:14px;
+    padding:14px;
+  }
+  @media (max-width: 860px){
+    .grid{grid-template-columns:1fr}
+  }
+
+  .panel{
+    background: rgba(255,255,255,.03);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+  }
+  .panel h2{
+    margin:0 0 10px 0;
+    font-size:14px;color:var(--muted);
+    font-weight:700;
+    letter-spacing:.2px;
+  }
+  .btnrow{display:flex;flex-wrap:wrap;gap:10px}
+  button{
+    appearance:none;border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    color:var(--ink);
+    padding:10px 12px;border-radius:12px;
+    cursor:pointer;
+    font-weight:700;
+    transition:.15s transform ease, .15s background ease, .15s border-color ease, .15s opacity ease;
+  }
+  button:hover{transform: translateY(-1px); background: rgba(255,255,255,.06)}
+  button:active{transform: translateY(0px)}
+  button.primary{
+    border-color: rgba(110,231,255,.35);
+    background: rgba(110,231,255,.10);
+  }
+  button.good{
+    border-color: rgba(34,197,94,.35);
+    background: rgba(34,197,94,.10);
+  }
+  button.warn{
+    border-color: rgba(251,191,36,.38);
+    background: rgba(251,191,36,.10);
+  }
+  button.bad{
+    border-color: rgba(251,113,133,.38);
+    background: rgba(251,113,133,.10);
+  }
+  button.ghost{
+    background: transparent;
+  }
+  button:disabled{
+    opacity:.45; cursor:not-allowed;
+  }
+
+  /* Jugs */
+  .jugs{
+    display:flex; gap:12px; justify-content:center; align-items:flex-end;
+    padding:10px 6px 6px 6px;
+    min-height:320px;
+  }
+  .jug{
+    width:120px; max-width:30vw;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.03);
+    border-radius:16px;
+    padding:10px;
+    position:relative;
+    user-select:none;
+    cursor:pointer;
+    transition: .15s transform ease, .15s border-color ease, .15s background ease;
+  }
+  .jug:hover{transform: translateY(-2px); background: rgba(255,255,255,.05)}
+  .jug.selected{
+    border-color: rgba(110,231,255,.55);
+    box-shadow: 0 0 0 3px rgba(110,231,255,.15);
+  }
+  .jug .cap{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:12px; color:var(--muted); margin-bottom:8px;
+  }
+  .jug .cap strong{color:var(--ink); font-size:12px}
+  .tank{
+    height:220px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(0,0,0,.18);
+    overflow:hidden;
+    position:relative;
+  }
+  .water{
+    position:absolute;left:0;right:0;bottom:0;
+    height:0%;
+    background: linear-gradient(180deg, rgba(110,231,255,.85), rgba(110,231,255,.25));
+    transition: height .18s ease;
+  }
+  .amt{
+    margin-top:8px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12px; color:var(--muted);
+  }
+  .amt strong{color:var(--ink)}
+  .hintbox{
+    margin-top:10px;
+    border:1px dashed rgba(110,231,255,.28);
+    background: rgba(110,231,255,.06);
+    padding:10px 12px;border-radius:12px;
+    color:var(--muted);
+    font-size:13px; line-height:1.45;
+    min-height:46px;
+  }
+  .status{
+    display:flex;flex-wrap:wrap; gap:8px;
+    font-size:12px; color:var(--muted);
+  }
+  .status .tag{
+    border:1px solid var(--line);
+    padding:6px 10px;border-radius:999px;
+    background: rgba(255,255,255,.03);
+  }
+  .status .tag strong{color:var(--ink)}
+  .banner{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    color:var(--muted);
+    font-size:13px; line-height:1.45;
+  }
+  .banner.good{border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.08)}
+  .banner.warn{border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.08)}
+  .banner.bad{border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.08)}
+  .center{
+    text-align:center;
+  }
+
+  /* Modal */
+  .modalOverlay{
+    position:fixed; inset:0;
+    background: rgba(0,0,0,.55);
+    display:none;
+    align-items:center; justify-content:center;
+    padding:18px;
+    z-index:50;
+  }
+  .modal{
+    width:min(920px, 100%);
+    background: linear-gradient(180deg, rgba(16,26,46,.96), rgba(12,20,40,.96));
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow: 0 22px 60px rgba(0,0,0,.55);
+    overflow:hidden;
+  }
+  .modalHeader{
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;
+  }
+  .modalHeader h3{margin:0;font-size:14px}
+  .modalBody{padding:14px 16px}
+  .modalBody p{margin:0 0 10px 0; color:var(--muted); line-height:1.55; font-size:13px}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    overflow:hidden;
+    border-radius:14px;
+    border:1px solid var(--line);
+  }
+  th, td{
+    padding:10px 10px;
+    border-bottom:1px solid var(--line);
+    font-size:13px;
+    text-align:left;
+  }
+  th{color:var(--muted); background: rgba(255,255,255,.03)}
+  tr:last-child td{border-bottom:none}
+  .kpi{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:10px;
+    margin-bottom:12px;
+  }
+  @media (max-width: 720px){
+    .kpi{grid-template-columns:1fr}
+  }
+  .kpi .box{
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.03);
+    border-radius:14px;
+    padding:10px 12px;
+  }
+  .kpi .box .label{font-size:12px;color:var(--muted)}
+  .kpi .box .val{font-size:18px;font-weight:900;margin-top:4px}
+  .footerRow{
+    display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;
+    padding:12px 16px;
+    border-top:1px solid var(--line);
+  }
+  .tiny{font-size:12px;color:var(--muted);line-height:1.45}
+  .row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; flex-wrap:wrap;
+  }
+
+  .start{
+    padding:18px;
+  }
+  .modeCard{
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.03);
+    border-radius:16px;
+    padding:14px;
+  }
+  .modeCard h3{margin:0 0 6px 0;font-size:15px}
+  .modeCard p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+  .modeCard .btnrow{margin-top:12px}
+  .divider{height:1px;background:var(--line);margin:14px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="appCard">
+
+    <!-- Start Screen -->
+    <div id="startScreen">
+      <div class="topbar">
+        <div class="title">
+          <h1>물통 미션 : 정확한 물의 양을 만들어라</h1>
+          <p>물을 옮겨 목표한 양을 만들어 보세요.</p>
+        </div>
+        <div class="pill"><strong>버전</strong> v1.0</div>
+      </div>
+
+      <div class="start">
+        <div class="grid" style="padding:0">
+          <div class="modeCard">
+            <h3>🟢 Normal 모드</h3>
+            <p>
+              물통을 옮겨서 <strong>정확한 물의 양을 만드는 연습 모드</strong>입니다.<br/>
+              힌트가 있으며, <strong>적은 이동으로 해결할수록 높은 점수(100점 만점)</strong>를 얻습니다.
+            </p>
+            <div class="btnrow">
+              <button class="primary" id="btnStartNormal">Normal 시작하기</button>
+            </div>
+            <div class="divider"></div>
+            <div class="tiny">
+              • 모든 문제는 해결할 수 있습니다.<br/>
+              • 초급 → 중급 → 고급 순서로 진행됩니다.
+            </div>
+          </div>
+
+          <div class="modeCard">
+            <h3>🔴 Hard 모드</h3>
+            <p>
+              이 모드에는 <strong>해결할 수 없는 문제도 포함</strong>되어 있습니다.<br/>
+              끝까지 시도하면서 <strong>이 문제는 가능한지, 불가능한지 판단</strong>해야 합니다.
+            </p>
+            <div class="banner warn" style="margin-top:10px">
+              ⚠️ 어떤 문제는 <strong>정답을 만드는 것이 아니라, 불가능하다고 판단하는 것이 정답</strong>입니다.
+            </div>
+            <div class="btnrow" style="margin-top:12px">
+              <button class="bad" id="btnStartHard">Hard 도전하기</button>
+            </div>
+            <div class="divider"></div>
+            <div class="tiny">
+              • 힌트는 제공되지 않습니다.<br/>
+              • 점수는 표시되지 않습니다. (판단 중심)
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="tiny">
+          이 게임은 <strong>정답뿐만 아니라 생각하는 과정</strong>을 중요하게 봅니다.
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" style="display:none">
+      <div class="topbar">
+        <div class="title">
+          <h1 id="modeTitle">Normal</h1>
+          <p id="stageDesc">설명</p>
+        </div>
+        <div class="status">
+          <div class="tag">스테이지 <strong id="stageNo">1</strong></div>
+          <div class="tag">목표 <strong id="goalText">4L</strong></div>
+          <div class="tag">이동 <strong id="movesText">0</strong></div>
+          <div class="tag">시간 <strong id="timeText">00:00</strong></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <h2>물통</h2>
+          <div class="banner" id="instructionBanner">
+            물통을 선택한 뒤 다른 통을 눌러 물을 옮기세요. 물은 한 통이 비거나, 다른 통이 가득 찰 때까지 옮겨집니다.
+          </div>
+
+          <div class="jugs" id="jugs"></div>
+
+          <div class="row">
+            <div class="tiny" id="selectInfo">선택: 없음</div>
+            <div class="btnrow">
+              <button id="btnReset" class="ghost">스테이지 리셋</button>
+              <button id="btnBackToMenu" class="ghost">메뉴</button>
+            </div>
+          </div>
+
+          <div class="banner warn" id="loopBanner" style="display:none;margin-top:10px">
+            전에 봤던 물 상태가 다시 나타났어요. 새로운 결과가 나오지 않고 있습니다.
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>조작</h2>
+          <div class="btnrow">
+            <button id="btnFill" class="primary">채우기</button>
+            <button id="btnEmpty">비우기</button>
+            <button id="btnDeclareImpossible" class="bad" style="display:none" disabled>이 문제는 불가능하다고 판단하기</button>
+          </div>
+
+          <div id="normalHintArea" style="margin-top:12px; display:none">
+            <div class="row">
+              <h2 style="margin:0;color:var(--muted);font-size:14px">힌트</h2>
+              <button id="btnHint" class="warn">힌트 보기</button>
+            </div>
+            <div class="hintbox" id="hintBox">힌트가 여기에 표시됩니다.</div>
+          </div>
+
+          <div id="hardNoteArea" style="margin-top:12px; display:none">
+            <div class="banner">
+              이 모드에는 풀 수 없는 문제가 있을 수 있습니다. 끝까지 시도하며 판단해 보세요.
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="tiny">
+            • 이동은 <strong>채우기 / 비우기 / 옮기기</strong> 모두 1회로 계산됩니다.<br/>
+            • Normal은 단계가 끝날 때 결과를 확인할 수 있습니다.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modalOverlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modalHeader">
+      <h3 id="modalTitle">결과</h3>
+      <button class="ghost" id="btnCloseModal">닫기</button>
+    </div>
+    <div class="modalBody" id="modalBody"></div>
+    <div class="footerRow" id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- Utility ----------
+  const $ = (sel) => document.querySelector(sel);
+  const el = (tag, cls) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    return n;
+  };
+  const pad2 = (n) => String(n).padStart(2,'0');
+  const msToMMSS = (ms) => {
+    const s = Math.max(0, Math.floor(ms/1000));
+    const mm = Math.floor(s/60);
+    const ss = s%60;
+    return `${pad2(mm)}:${pad2(ss)}`;
+  };
+
+  // ---------- BFS (minimum moves + solvable check) ----------
+  function bfsMinMoves(capacities, goal){
+    const n = capacities.length;
+    const start = Array(n).fill(0);
+    const key = (st) => st.join(',');
+    const q = [{st:start, d:0}];
+    const seen = new Set([key(start)]);
+
+    const isGoal = (st) => st.some(v => v === goal);
+    if (isGoal(start)) return 0;
+
+    while(q.length){
+      const {st, d} = q.shift();
+
+      // Actions: fill i, empty i, pour i->j
+      for(let i=0;i<n;i++){
+        // fill
+        if(st[i] !== capacities[i]){
+          const ns = st.slice(); ns[i] = capacities[i];
+          const k = key(ns);
+          if(!seen.has(k)){
+            if(isGoal(ns)) return d+1;
+            seen.add(k); q.push({st:ns,d:d+1});
+          }
+        }
+        // empty
+        if(st[i] !== 0){
+          const ns = st.slice(); ns[i] = 0;
+          const k = key(ns);
+          if(!seen.has(k)){
+            if(isGoal(ns)) return d+1;
+            seen.add(k); q.push({st:ns,d:d+1});
+          }
+        }
+        // pour i->j
+        if(st[i] !== 0){
+          for(let j=0;j<n;j++){
+            if(i===j) continue;
+            if(st[j] === capacities[j]) continue;
+            const amount = Math.min(st[i], capacities[j]-st[j]);
+            if(amount<=0) continue;
+            const ns = st.slice();
+            ns[i] -= amount;
+            ns[j] += amount;
+            const k = key(ns);
+            if(!seen.has(k)){
+              if(isGoal(ns)) return d+1;
+              seen.add(k); q.push({st:ns,d:d+1});
+            }
+          }
+        }
+      }
+    }
+    return null; // unreachable
+  }
+
+  // ---------- Stage Data ----------
+  // Normal: 20 stages, solvable by design (we still compute min via BFS)
+  const normalStages = [
+    {caps:[3,5], goal:4},
+    {caps:[2,7], goal:5},
+    {caps:[4,7], goal:3},
+    {caps:[5,8], goal:6},
+    {caps:[6,10], goal:2},
+    {caps:[3,8], goal:7},
+
+    {caps:[4,9], goal:1},
+    {caps:[5,9], goal:7},
+    {caps:[6,11], goal:5},
+    {caps:[7,11], goal:6},
+    {caps:[3,5,8], goal:4},
+    {caps:[3,7,10], goal:6},
+    {caps:[4,7,9], goal:5},
+
+    {caps:[5,8,13], goal:6},
+    {caps:[3,6,11], goal:8},
+    {caps:[3,7,11], goal:5},
+    {caps:[4,9,13], goal:10},
+    {caps:[5,7,12], goal:6},
+    {caps:[3,8,14], goal:11},
+    {caps:[3,7,15], goal:9},
+  ];
+
+  // Hard: 10 stages mixed (some are intentionally impossible)
+  const hardStages = [
+    {caps:[3,5], goal:4},     // possible
+    {caps:[2,9], goal:7},     // possible
+    {caps:[5,8], goal:6},     // possible
+    {caps:[4,7], goal:5},     // possible
+    {caps:[3,7,11], goal:5},  // possible
+    {caps:[6,11], goal:1},    // possible
+
+    {caps:[6,10], goal:5},    // impossible
+    {caps:[4,8], goal:6},     // impossible
+    {caps:[3,9], goal:4},     // impossible
+    {caps:[5,15], goal:4},    // impossible
+  ];
+
+  const tiers = [
+    {name:"초급", from:1, to:6},
+    {name:"중급", from:7, to:13},
+    {name:"고급", from:14, to:20},
+  ];
+
+  // ---------- Hints (generic, no solutions) ----------
+  const hintLevels = [
+    "한 번에 해결하려고 하지 말고, 먼저 ‘중간 상태’를 만들어 보세요.",
+    "작은 통을 ‘측정 도구’처럼 써 보세요. 가득 채우고 옮기면 남는 양이 생깁니다.",
+    "같은 행동을 반복하다가, 이전과 똑같은 상황이 다시 나오면 다른 선택을 시도해 보세요."
+  ];
+
+  // ---------- App State ----------
+  const state = {
+    mode: null, // 'normal' | 'hard'
+    stages: [],
+    idx: 0, // 0-based
+    caps: [],
+    goal: 0,
+    amounts: [],
+    selected: null, // selected jug index
+    moves: 0,
+    startMs: 0,
+    timerId: null,
+    loopSet: new Set(),
+    loopDetected: false,
+    minMoves: null, // computed (normal scoring basis)
+    hintUsed: 0,
+    // records
+    records: [], // per stage record objects
+  };
+
+  // ---------- DOM ----------
+  const startScreen = $("#startScreen");
+  const gameScreen = $("#gameScreen");
+  const modeTitle = $("#modeTitle");
+  const stageDesc = $("#stageDesc");
+  const stageNo = $("#stageNo");
+  const goalText = $("#goalText");
+  const movesText = $("#movesText");
+  const timeText = $("#timeText");
+  const jugsEl = $("#jugs");
+  const selectInfo = $("#selectInfo");
+  const loopBanner = $("#loopBanner");
+  const btnDeclareImpossible = $("#btnDeclareImpossible");
+
+  const normalHintArea = $("#normalHintArea");
+  const hardNoteArea = $("#hardNoteArea");
+  const hintBox = $("#hintBox");
+  const btnHint = $("#btnHint");
+
+  const modalOverlay = $("#modalOverlay");
+  const modalTitle = $("#modalTitle");
+  const modalBody = $("#modalBody");
+  const modalFooter = $("#modalFooter");
+
+  // ---------- UI helpers ----------
+  function showModal(title, bodyNode, footerButtons){
+    modalTitle.textContent = title;
+    modalBody.innerHTML = "";
+    modalBody.appendChild(bodyNode);
+    modalFooter.innerHTML = "";
+    footerButtons.forEach(b => modalFooter.appendChild(b));
+    modalOverlay.style.display = "flex";
+  }
+  function closeModal(){
+    modalOverlay.style.display = "none";
+  }
+  $("#btnCloseModal").addEventListener("click", closeModal);
+  modalOverlay.addEventListener("click", (e) => {
+    if(e.target === modalOverlay) closeModal();
+  });
+
+  function setScreen(which){
+    if(which === "start"){
+      startScreen.style.display = "";
+      gameScreen.style.display = "none";
+      stopTimer();
+    }else{
+      startScreen.style.display = "none";
+      gameScreen.style.display = "";
+    }
+  }
+
+  function resetStageState(){
+    state.amounts = Array(state.caps.length).fill(0);
+    state.selected = null;
+    state.moves = 0;
+    state.hintUsed = 0;
+    state.loopSet = new Set();
+    state.loopDetected = false;
+    loopBanner.style.display = "none";
+    btnDeclareImpossible.disabled = true;
+    btnDeclareImpossible.style.display = (state.mode === "hard") ? "" : "none";
+
+    // initialize loopSet with start state
+    state.loopSet.add(state.amounts.join(','));
+    hintBox.textContent = "힌트가 여기에 표시됩니다.";
+    btnHint.disabled = false;
+
+    state.startMs = Date.now();
+    startTimer();
+    render();
+  }
+
+  function stopTimer(){
+    if(state.timerId){
+      clearInterval(state.timerId);
+      state.timerId = null;
+    }
+  }
+  function startTimer(){
+    stopTimer();
+    state.timerId = setInterval(() => {
+      const ms = Date.now() - state.startMs;
+      timeText.textContent = msToMMSS(ms);
+    }, 250);
+    timeText.textContent = "00:00";
+  }
+
+  function render(){
+    modeTitle.textContent = state.mode === "normal" ? "Normal" : "Hard";
+    stageNo.textContent = String(state.idx + 1);
+    goalText.textContent = `${state.goal}L`;
+    movesText.textContent = String(state.moves);
+
+    if(state.mode === "normal"){
+      stageDesc.textContent = "목표한 물의 양을 만들어 보세요. 이동 횟수를 줄일수록 점수가 높아집니다.";
+      normalHintArea.style.display = "";
+      hardNoteArea.style.display = "none";
+      btnDeclareImpossible.style.display = "none";
+    }else{
+      stageDesc.textContent = "이 문제는 가능할 수도, 불가능할 수도 있습니다. 끝까지 시도하며 판단해 보세요.";
+      normalHintArea.style.display = "none";
+      hardNoteArea.style.display = "";
+      btnDeclareImpossible.style.display = "";
+    }
+
+    selectInfo.textContent = state.selected == null
+      ? "선택: 없음"
+      : `선택: ${state.selected+1}번 통 (${state.caps[state.selected]}L)`;
+
+    // build jugs
+    jugsEl.innerHTML = "";
+    state.caps.forEach((cap, i) => {
+      const jug = el("div", "jug" + (state.selected===i ? " selected" : ""));
+      jug.setAttribute("role","button");
+      jug.setAttribute("tabindex","0");
+
+      const head = el("div","cap");
+      head.innerHTML = `<span>${i+1}번 통</span><strong>${cap}L</strong>`;
+      const tank = el("div","tank");
+      const water = el("div","water");
+      const pct = (state.amounts[i] / cap) * 100;
+      water.style.height = `${pct}%`;
+      tank.appendChild(water);
+
+      const amt = el("div","amt");
+      amt.innerHTML = `<span>현재</span><strong>${state.amounts[i]}L</strong>`;
+
+      jug.appendChild(head);
+      jug.appendChild(tank);
+      jug.appendChild(amt);
+
+      jug.addEventListener("click", () => onJugClick(i));
+      jug.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " ") { e.preventDefault(); onJugClick(i); }
+      });
+
+      jugsEl.appendChild(jug);
+    });
+
+    // loop banners
+    if(state.mode === "hard"){
+      loopBanner.style.display = state.loopDetected ? "" : "none";
+      btnDeclareImpossible.disabled = !state.loopDetected;
+    }
+  }
+
+  // ---------- Game logic ----------
+  function onJugClick(i){
+    // If no selection: select jug
+    if(state.selected == null){
+      state.selected = i;
+      render();
+      return;
+    }
+
+    // Same jug: just keep selected (no-op)
+    if(state.selected === i){
+      render();
+      return;
+    }
+
+    // Pour from selected -> i
+    pour(state.selected, i);
+  }
+
+  function addMoveAndCheckLoop(){
+    state.moves += 1;
+
+    const key = state.amounts.join(',');
+    if(state.loopSet.has(key)){
+      state.loopDetected = true;
+    }else{
+      state.loopSet.add(key);
+    }
+
+    movesText.textContent = String(state.moves);
+    if(state.mode === "hard"){
+      loopBanner.style.display = state.loopDetected ? "" : "none";
+      btnDeclareImpossible.disabled = !state.loopDetected;
+    }
+  }
+
+  function fillSelected(){
+    if(state.selected == null) return;
+    const i = state.selected;
+    if(state.amounts[i] === state.caps[i]) return;
+    state.amounts[i] = state.caps[i];
+    addMoveAndCheckLoop();
+    render();
+    checkWin();
+  }
+
+  function emptySelected(){
+    if(state.selected == null) return;
+    const i = state.selected;
+    if(state.amounts[i] === 0) return;
+    state.amounts[i] = 0;
+    addMoveAndCheckLoop();
+    render();
+    checkWin();
+  }
+
+  function pour(from, to){
+    const capTo = state.caps[to];
+    if(state.amounts[from] === 0) return;
+    if(state.amounts[to] === capTo) return;
+
+    const amount = Math.min(state.amounts[from], capTo - state.amounts[to]);
+    if(amount <= 0) return;
+
+    state.amounts[from] -= amount;
+    state.amounts[to] += amount;
+
+    addMoveAndCheckLoop();
+    // after pouring, select destination (helps fast play)
+    state.selected = to;
+    render();
+    checkWin();
+  }
+
+  function isGoalReached(){
+    return state.amounts.some(v => v === state.goal);
+  }
+
+  function computeNormalScore(moves, ms, minMoves){
+    // 100점 만점: 초과 이동/시간 패널티
+    // - 이동: (moves - minMoves) * 5점
+    // - 시간: 기준시간(= minMoves*18초) 초과 시, 30초마다 -5점
+    const base = 100;
+    const extraMoves = Math.max(0, moves - (minMoves ?? moves));
+    const movePenalty = extraMoves * 5;
+
+    const baselineMs = (minMoves ?? moves) * 18 * 1000; // 직관적 기준(스테이지 규모에 따라 자연 증가)
+    const extraMs = Math.max(0, ms - baselineMs);
+    const timePenalty = Math.floor(extraMs / (30*1000)) * 5;
+
+    return Math.max(0, base - movePenalty - timePenalty);
+  }
+
+  function checkWin(){
+    if(!isGoalReached()) return;
+
+    // Hard mode: if stage is actually impossible, reaching goal shouldn't happen (but if it does, allow anyway)
+    endStage({type:"solve"});
+  }
+
+  function endStage({type, hardImpossibleDeclared=false}){
+    stopTimer();
+    const elapsed = Date.now() - state.startMs;
+
+    const record = {
+      mode: state.mode,
+      stageIndex: state.idx,
+      caps: state.caps.slice(),
+      goal: state.goal,
+      moves: state.moves,
+      timeMs: elapsed,
+      timeText: msToMMSS(elapsed),
+      resultType: type, // 'solve' | 'declare-impossible'
+      declaredImpossible: hardImpossibleDeclared
+    };
+
+    // Normal scoring
+    if(state.mode === "normal"){
+      const min = state.minMoves ?? bfsMinMoves(state.caps, state.goal);
+      record.minMoves = min;
+      record.score = computeNormalScore(state.moves, elapsed, min);
+    }
+
+    state.records.push(record);
+
+    // stage complete UI
+    if(state.mode === "normal"){
+      showNormalStageClear(record);
+    }else{
+      showHardStageClear(record);
+    }
+  }
+
+  function showNormalStageClear(rec){
+    const body = el("div");
+    const kpi = el("div","kpi");
+    const box1 = el("div","box");
+    box1.innerHTML = `<div class="label">이번 스테이지 점수</div><div class="val">${rec.score} / 100</div>`;
+    const box2 = el("div","box");
+    box2.innerHTML = `<div class="label">이동 횟수</div><div class="val">${rec.moves}회</div>`;
+    const box3 = el("div","box");
+    box3.innerHTML = `<div class="label">클리어 시간</div><div class="val">${rec.timeText}</div>`;
+    kpi.append(box1,box2,box3);
+
+    const p = el("p");
+    p.textContent = "잘 해결했습니다. 다음 문제로 넘어갑니다.";
+
+    body.appendChild(kpi);
+    body.appendChild(p);
+
+    const btnNext = el("button","good");
+    btnNext.textContent = "다음";
+    btnNext.addEventListener("click", () => {
+      closeModal();
+      goNextNormalOrTier();
+    });
+
+    showModal("스테이지 클리어!", body, [btnNext]);
+  }
+
+  function showHardStageClear(rec){
+    const body = el("div");
+    const kpi = el("div","kpi");
+    const box1 = el("div","box");
+    box1.innerHTML = `<div class="label">결과</div><div class="val">${rec.resultType === "declare-impossible" ? "불가능 판단" : "목표 달성"}</div>`;
+    const box2 = el("div","box");
+    box2.innerHTML = `<div class="label">이동 횟수</div><div class="val">${rec.moves}회</div>`;
+    const box3 = el("div","box");
+    box3.innerHTML = `<div class="label">진행 시간</div><div class="val">${rec.timeText}</div>`;
+    kpi.append(box1,box2,box3);
+
+    const p = el("p");
+    if(rec.resultType === "declare-impossible"){
+      p.textContent = "이 문제는 해결할 수 없는 문제였습니다. 올바르게 판단했습니다.";
+    }else{
+      p.textContent = "이 문제는 해결할 수 있는 문제였습니다. 해결 방법을 잘 찾아냈습니다.";
+    }
+
+    body.appendChild(kpi);
+    body.appendChild(p);
+
+    const btnNext = el("button","good");
+    btnNext.textContent = (state.idx === state.stages.length - 1) ? "결과 보기" : "다음";
+    btnNext.addEventListener("click", () => {
+      closeModal();
+      goNextHardOrEnd();
+    });
+
+    showModal("완료", body, [btnNext]);
+  }
+
+  function tierNameForStage(stageNumber){
+    for(const t of tiers){
+      if(stageNumber >= t.from && stageNumber <= t.to) return t.name;
+    }
+    return null;
+  }
+
+  function goNextNormalOrTier(){
+    const stageNumber = state.idx + 1; // 1-based current stage
+    const t = tiers.find(x => x.to === stageNumber);
+    if(t){
+      showTierSummary(t);
+      return;
+    }
+    // otherwise next stage
+    if(state.idx < state.stages.length - 1){
+      state.idx += 1;
+      loadStage();
+    }else{
+      // should not happen (tier end at 20)
+      showFinalNormalSummary();
+    }
+  }
+
+  function showTierSummary(tier){
+    const fromIdx = tier.from - 1;
+    const toIdx = tier.to - 1;
+    const rows = state.records
+      .filter(r => r.mode === "normal" && r.stageIndex >= fromIdx && r.stageIndex <= toIdx);
+
+    const avg = Math.round(rows.reduce((a,b)=>a+(b.score??0),0) / rows.length);
+
+    const body = el("div");
+    const kpi = el("div","kpi");
+    const b1 = el("div","box");
+    b1.innerHTML = `<div class="label">${tier.name} 점수</div><div class="val">${avg} / 100</div>`;
+    const b2 = el("div","box");
+    b2.innerHTML = `<div class="label">${tier.name} 총 이동</div><div class="val">${rows.reduce((a,b)=>a+b.moves,0)}회</div>`;
+    const b3 = el("div","box");
+    b3.innerHTML = `<div class="label">${tier.name} 총 시간</div><div class="val">${msToMMSS(rows.reduce((a,b)=>a+b.timeMs,0))}</div>`;
+    kpi.append(b1,b2,b3);
+    body.appendChild(kpi);
+
+    const p = el("p");
+    p.textContent = `${tier.name}에서의 결과입니다. 스테이지별 이동 횟수와 시간을 확인해 보세요.`;
+    body.appendChild(p);
+
+    const table = el("table");
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>스테이지</th>
+          <th>이동 횟수</th>
+          <th>클리어 시간</th>
+          <th>점수</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>${r.stageIndex+1}</td>
+            <td>${r.moves}회</td>
+            <td>${r.timeText}</td>
+            <td>${r.score} / 100</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    `;
+    body.appendChild(table);
+
+    const btnNext = el("button","good");
+    btnNext.textContent = (tier.to === 20) ? "최종 결과 보기" : "다음 단계로";
+    btnNext.addEventListener("click", () => {
+      closeModal();
+      if(tier.to === 20){
+        showFinalNormalSummary();
+      }else{
+        state.idx += 1;
+        loadStage();
+      }
+    });
+
+    showModal(`${tier.name} 완료!`, body, [btnNext]);
+  }
+
+  function showFinalNormalSummary(){
+    const rows = state.records.filter(r => r.mode === "normal");
+    const tierScores = tiers.map(t => {
+      const subset = rows.filter(r => (r.stageIndex+1) >= t.from && (r.stageIndex+1) <= t.to);
+      const avg = Math.round(subset.reduce((a,b)=>a+(b.score??0),0)/subset.length);
+      return {name:t.name, avg, subset};
+    });
+
+    const overall = Math.round(tierScores.reduce((a,b)=>a+b.avg,0)/tierScores.length);
+
+    const body = el("div");
+    const kpi = el("div","kpi");
+    const b1 = el("div","box"); b1.innerHTML = `<div class="label">최종 점수</div><div class="val">${overall} / 100</div>`;
+    const b2 = el("div","box"); b2.innerHTML = `<div class="label">총 이동</div><div class="val">${rows.reduce((a,b)=>a+b.moves,0)}회</div>`;
+    const b3 = el("div","box"); b3.innerHTML = `<div class="label">총 시간</div><div class="val">${msToMMSS(rows.reduce((a,b)=>a+b.timeMs,0))}</div>`;
+    kpi.append(b1,b2,b3);
+    body.appendChild(kpi);
+
+    const p = el("p");
+    p.textContent = "단계별 점수와 스테이지별 기록을 확인할 수 있습니다.";
+    body.appendChild(p);
+
+    const table = el("table");
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>단계</th>
+          <th>점수(평균)</th>
+          <th>스테이지</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tierScores.map(t => `
+          <tr>
+            <td>${t.name}</td>
+            <td>${t.avg} / 100</td>
+            <td>${t.subset[0].stageIndex+1}–${t.subset[t.subset.length-1].stageIndex+1}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    `;
+    body.appendChild(table);
+
+    const btnDetails = el("button","primary");
+    btnDetails.textContent = "전체 스테이지 기록 보기";
+    btnDetails.addEventListener("click", () => {
+      closeModal();
+      showAllNormalDetails();
+    });
+
+    const btnMenu = el("button","ghost");
+    btnMenu.textContent = "메뉴로";
+    btnMenu.addEventListener("click", () => {
+      closeModal();
+      resetToMenu();
+    });
+
+    showModal("Normal 최종 결과", body, [btnDetails, btnMenu]);
+  }
+
+  function showAllNormalDetails(){
+    const rows = state.records.filter(r => r.mode === "normal");
+    const body = el("div");
+    const p = el("p");
+    p.textContent = "스테이지별 이동 횟수와 클리어 시간, 점수입니다.";
+    body.appendChild(p);
+
+    const table = el("table");
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>스테이지</th>
+          <th>통(용량)</th>
+          <th>목표</th>
+          <th>이동</th>
+          <th>시간</th>
+          <th>점수</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>${r.stageIndex+1}</td>
+            <td>${r.caps.join(", ")}L</td>
+            <td>${r.goal}L</td>
+            <td>${r.moves}회</td>
+            <td>${r.timeText}</td>
+            <td>${r.score} / 100</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    `;
+    body.appendChild(table);
+
+    const btnMenu = el("button","ghost");
+    btnMenu.textContent = "메뉴로";
+    btnMenu.addEventListener("click", () => {
+      closeModal();
+      resetToMenu();
+    });
+
+    showModal("전체 기록", body, [btnMenu]);
+  }
+
+  function goNextHardOrEnd(){
+    if(state.idx < state.stages.length - 1){
+      state.idx += 1;
+      loadStage();
+    }else{
+      showHardEndSummary();
+    }
+  }
+
+  function showHardEndSummary(){
+    const rows = state.records.filter(r => r.mode === "hard");
+    const solved = rows.filter(r => r.resultType === "solve").length;
+    const judged = rows.filter(r => r.resultType === "declare-impossible").length;
+
+    const body = el("div");
+    const kpi = el("div","kpi");
+    const b1 = el("div","box"); b1.innerHTML = `<div class="label">목표 달성</div><div class="val">${solved}개</div>`;
+    const b2 = el("div","box"); b2.innerHTML = `<div class="label">불가능 판단</div><div class="val">${judged}개</div>`;
+    const b3 = el("div","box"); b3.innerHTML = `<div class="label">총 시간</div><div class="val">${msToMMSS(rows.reduce((a,b)=>a+b.timeMs,0))}</div>`;
+    kpi.append(b1,b2,b3);
+    body.appendChild(kpi);
+
+    const p = el("p");
+    p.textContent = "Hard 모드는 정답을 만드는 것뿐 아니라, 가능한지 불가능한지 판단하는 힘이 중요합니다.";
+    body.appendChild(p);
+
+    const table = el("table");
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>스테이지</th>
+          <th>통(용량)</th>
+          <th>목표</th>
+          <th>결과</th>
+          <th>이동</th>
+          <th>시간</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>${r.stageIndex+1}</td>
+            <td>${r.caps.join(", ")}L</td>
+            <td>${r.goal}L</td>
+            <td>${r.resultType === "declare-impossible" ? "불가능 판단" : "목표 달성"}</td>
+            <td>${r.moves}회</td>
+            <td>${r.timeText}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    `;
+    body.appendChild(table);
+
+    const btnMenu = el("button","ghost");
+    btnMenu.textContent = "메뉴로";
+    btnMenu.addEventListener("click", () => {
+      closeModal();
+      resetToMenu();
+    });
+
+    showModal("Hard 결과", body, [btnMenu]);
+  }
+
+  function resetToMenu(){
+    state.mode = null;
+    state.stages = [];
+    state.idx = 0;
+    state.records = [];
+    setScreen("start");
+  }
+
+  // ---------- Hard: declare impossible + quiz ----------
+  function openImpossibleQuiz(){
+    if(!state.loopDetected) return;
+
+    stopTimer(); // pause during quiz
+    const body = el("div");
+
+    const p = el("p");
+    p.textContent = "이 문제가 불가능하다고 생각한 이유는 무엇인가요?";
+    body.appendChild(p);
+
+    const opts = [
+      "아무리 해도 물의 양이 같은 방식으로만 바뀌어, 목표한 양이 나오지 않는다.",
+      "물을 옮기는 순서를 잘못 선택했다.",
+      "시간이 오래 걸릴 뿐, 계속하면 가능하다."
+    ];
+
+    const list = el("div");
+    list.style.display = "grid";
+    list.style.gap = "10px";
+
+    let chosen = null;
+    opts.forEach((text, idx) => {
+      const b = el("button", idx===0 ? "primary" : "");
+      b.textContent = text;
+      b.style.textAlign = "left";
+      b.addEventListener("click", () => chosen = idx);
+      list.appendChild(b);
+    });
+
+    body.appendChild(list);
+
+    const btnOk = el("button","good");
+    btnOk.textContent = "판정하기";
+    btnOk.addEventListener("click", () => {
+      // Determine if stage is actually impossible (by BFS)
+      const solvableMin = bfsMinMoves(state.caps, state.goal);
+      const actuallyImpossible = (solvableMin === null);
+
+      if(chosen == null){
+        const warn = el("div","banner warn");
+        warn.textContent = "선택지를 하나 골라 주세요.";
+        body.appendChild(warn);
+        return;
+      }
+
+      if(actuallyImpossible && chosen === 0){
+        closeModal();
+        endStage({type:"declare-impossible", hardImpossibleDeclared:true});
+      }else{
+        // fail: resume timer and continue
+        closeModal();
+        state.startMs = Date.now() - (parseTimeMMSS(timeText.textContent)*1000); // keep approximate elapsed
+        startTimer();
+        // show brief message
+        const b = el("div","banner bad");
+        b.textContent = "판정이 맞지 않았습니다. 계속 시도해 보세요.";
+        // temporary modal
+        const tmp = el("div");
+        tmp.appendChild(b);
+        const btnContinue = el("button","good");
+        btnContinue.textContent = "계속하기";
+        btnContinue.addEventListener("click", () => {
+          closeModal();
+          // resume exact timer is already running
+        });
+        showModal("판정 실패", tmp, [btnContinue]);
+      }
+    });
+
+    const btnCancel = el("button","ghost");
+    btnCancel.textContent = "취소";
+    btnCancel.addEventListener("click", () => {
+      closeModal();
+      // resume timer
+      state.startMs = Date.now() - (parseTimeMMSS(timeText.textContent)*1000);
+      startTimer();
+    });
+
+    showModal("불가능 판단", body, [btnOk, btnCancel]);
+  }
+
+  function parseTimeMMSS(mmss){
+    // "MM:SS"
+    const [mm, ss] = mmss.split(':').map(x => parseInt(x,10));
+    if(Number.isFinite(mm) && Number.isFinite(ss)) return mm*60 + ss;
+    return 0;
+  }
+
+  // ---------- Stage loading ----------
+  function loadStage(){
+    const st = state.stages[state.idx];
+    state.caps = st.caps.slice();
+    state.goal = st.goal;
+
+    // Normal minMoves computed upfront (internal, not shown)
+    if(state.mode === "normal"){
+      state.minMoves = bfsMinMoves(state.caps, state.goal);
+      // Normal stages must be solvable; if not, fallback gracefully
+      if(state.minMoves === null){
+        // keep playable but scoring will treat minMoves as moves
+        state.minMoves = null;
+      }
+    }else{
+      state.minMoves = null; // not needed
+    }
+
+    resetStageState();
+  }
+
+  // ---------- Events ----------
+  $("#btnStartNormal").addEventListener("click", () => {
+    state.mode = "normal";
+    state.stages = normalStages.slice();
+    state.idx = 0;
+    state.records = [];
+    setScreen("game");
+    loadStage();
+  });
+
+  $("#btnStartHard").addEventListener("click", () => {
+    state.mode = "hard";
+    state.stages = hardStages.slice();
+    state.idx = 0;
+    state.records = [];
+    setScreen("game");
+    loadStage();
+  });
+
+  $("#btnBackToMenu").addEventListener("click", () => {
+    // confirm
+    const body = el("div");
+    const p = el("p");
+    p.textContent = "메뉴로 돌아가면 현재 진행 중인 기록은 종료됩니다.";
+    body.appendChild(p);
+
+    const btnYes = el("button","bad");
+    btnYes.textContent = "메뉴로";
+    btnYes.addEventListener("click", () => {
+      closeModal();
+      resetToMenu();
+    });
+
+    const btnNo = el("button","good");
+    btnNo.textContent = "계속하기";
+    btnNo.addEventListener("click", () => closeModal());
+
+    showModal("확인", body, [btnNo, btnYes]);
+  });
+
+  $("#btnReset").addEventListener("click", () => {
+    const body = el("div");
+    const p = el("p");
+    p.textContent = "이 스테이지를 처음부터 다시 시작할까요?";
+    body.appendChild(p);
+
+    const btnYes = el("button","warn");
+    btnYes.textContent = "리셋";
+    btnYes.addEventListener("click", () => {
+      closeModal();
+      resetStageState();
+    });
+
+    const btnNo = el("button","ghost");
+    btnNo.textContent = "취소";
+    btnNo.addEventListener("click", () => closeModal());
+
+    showModal("스테이지 리셋", body, [btnNo, btnYes]);
+  });
+
+  $("#btnFill").addEventListener("click", fillSelected);
+  $("#btnEmpty").addEventListener("click", emptySelected);
+
+  btnHint.addEventListener("click", () => {
+    state.hintUsed += 1;
+    const idx = Math.min(hintLevels.length, state.hintUsed) - 1;
+    hintBox.textContent = hintLevels[idx] || hintLevels[hintLevels.length-1];
+    if(state.hintUsed >= hintLevels.length){
+      btnHint.disabled = true;
+    }
+  });
+
+  btnDeclareImpossible.addEventListener("click", () => {
+    if(state.mode !== "hard") return;
+    if(!state.loopDetected) return;
+    openImpossibleQuiz();
+  });
+
+  // initial screen
+  setScreen("start");
+})();
+</script>
+</body>
+</html>
