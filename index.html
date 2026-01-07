@@ -155,8 +155,7 @@
     background: rgba(0,0,0,.10);
     border:1px solid rgba(255,255,255,.08);
     overflow:hidden;
-    /* 높이는 JS에서 용량에 따라 조정 */
-    height:230px;
+    height:230px; /* JS에서 용량에 따라 조정 */
   }
   .jugSvgWrap svg{display:block; width:100%; height:100%}
 
@@ -307,7 +306,7 @@
           <h1>물통 미션 : 정확한 물의 양을 만들어라</h1>
           <p>물을 옮겨 목표한 양을 만들어 보세요.</p>
         </div>
-        <div class="pill"><strong>버전</strong> v1.2 (모드토글+애니+비례크기)</div>
+        <div class="pill"><strong>버전</strong> v1.3 (선택해제+바닥정렬+배경클릭취소+DEV핫키)</div>
       </div>
 
       <div class="start">
@@ -371,10 +370,12 @@
       </div>
 
       <div class="grid">
-        <div class="panel">
+        <!-- LEFT PANEL (배경 클릭으로 선택 취소 적용 영역) -->
+        <div class="panel" id="jugPanel">
           <h2>물통</h2>
           <div class="banner" id="instructionBanner">
-            통을 누르면 선택됩니다. 물을 옮길 때는 <strong>옮기기 모드</strong>를 켠 뒤, 다른 통을 누르세요.
+            통을 누르면 선택됩니다. 물을 옮길 때는 <strong>옮기기 모드</strong>를 켠 뒤, 다른 통을 누르세요.<br/>
+            물을 옮기면 <strong>선택이 자동으로 취소</strong>됩니다.
           </div>
 
           <div class="jugs" id="jugs"></div>
@@ -422,7 +423,8 @@
           <div class="divider"></div>
           <div class="tiny">
             • 이동은 <strong>채우기 / 비우기 / 옮기기</strong> 모두 1회로 계산됩니다.<br/>
-            • 통의 크기는 용량에 따라 조금씩 다릅니다.
+            • 통의 크기는 용량에 따라 조금씩 다릅니다.<br/>
+            • (개발자) 숫자 1 왼쪽 키(₩/`/~/\) + ←/→/Enter
           </div>
         </div>
       </div>
@@ -454,9 +456,8 @@
     const ss = s%60;
     return `${pad2(mm)}:${pad2(ss)}`;
   };
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  // ---------- BFS ----------
+  // ---------- BFS (min moves) ----------
   function bfsMinMoves(capacities, goal){
     const n = capacities.length;
     const start = Array(n).fill(0);
@@ -498,6 +499,73 @@
             if(!seen.has(k)){
               if(isGoal(ns)) return d+1;
               seen.add(k); q.push({st:ns,d:d+1});
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // ---------- BFS (path for animation) ----------
+  function bfsPath(capacities, goal){
+    const n = capacities.length;
+    const start = Array(n).fill(0);
+    const key = (st) => st.join(',');
+    const isGoal = (st) => st.some(v => v === goal);
+
+    const q = [start];
+    const parent = new Map(); // key -> {prevKey, st}
+    parent.set(key(start), {prev:null, st:start});
+
+    while(q.length){
+      const st = q.shift();
+      if(isGoal(st)){
+        // reconstruct path of states
+        const path = [];
+        let k = key(st);
+        while(k){
+          const node = parent.get(k);
+          path.push(node.st);
+          k = node.prev;
+        }
+        path.reverse();
+        return path;
+      }
+
+      for(let i=0;i<n;i++){
+        // fill i
+        if(st[i] !== capacities[i]){
+          const ns = st.slice(); ns[i] = capacities[i];
+          const nk = key(ns);
+          if(!parent.has(nk)){
+            parent.set(nk, {prev:key(st), st:ns});
+            q.push(ns);
+          }
+        }
+        // empty i
+        if(st[i] !== 0){
+          const ns = st.slice(); ns[i] = 0;
+          const nk = key(ns);
+          if(!parent.has(nk)){
+            parent.set(nk, {prev:key(st), st:ns});
+            q.push(ns);
+          }
+        }
+        // pour i -> j
+        if(st[i] !== 0){
+          for(let j=0;j<n;j++){
+            if(i===j) continue;
+            if(st[j] === capacities[j]) continue;
+            const amount = Math.min(st[i], capacities[j]-st[j]);
+            if(amount<=0) continue;
+            const ns = st.slice();
+            ns[i] -= amount;
+            ns[j] += amount;
+            const nk = key(ns);
+            if(!parent.has(nk)){
+              parent.set(nk, {prev:key(st), st:ns});
+              q.push(ns);
             }
           }
         }
@@ -576,7 +644,8 @@
     hintUsed: 0,
     records: [],
     pourMode: false,
-    jugUI: [] // per jug: refs to update without rebuilding
+    jugUI: [],
+    isAutoSolving: false
   };
 
   // ---------- DOM ----------
@@ -600,6 +669,8 @@
 
   const btnPourMode = $("#btnPourMode");
   const modeStateText = $("#modeStateText");
+
+  const jugPanel = $("#jugPanel");
 
   const modalOverlay = $("#modalOverlay");
   const modalTitle = $("#modalTitle");
@@ -653,11 +724,9 @@
 
   // ---------- SVG jug template + refs ----------
   function createJugElement(jugIndex, cap){
-    // Base geometry
     const W = 120, H = 210;
     const innerX = 22, innerY = 22, innerW = 76, innerH = 160;
 
-    // ticks: 0 / mid / max (right side)
     const tickSideX = innerX + innerW + 6;
     const tick0Y = innerY + innerH;
     const tickMidY = innerY + innerH/2;
@@ -676,12 +745,12 @@
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.setAttribute("width","100%");
     svg.setAttribute("height","100%");
+    // ✅ B 반영: 컨테이너가 커져도 아래 기준으로 붙도록(떠 보임 개선)
+    svg.setAttribute("preserveAspectRatio", "xMidYMax meet");
 
     const defs = document.createElementNS("http://www.w3.org/2000/svg","defs");
-
     const id = `s${state.idx}_j${jugIndex}_${Math.random().toString(16).slice(2)}`;
 
-    // gradients
     const cupGrad = document.createElementNS("http://www.w3.org/2000/svg","linearGradient");
     cupGrad.setAttribute("id", `cupGrad-${id}`);
     cupGrad.setAttribute("x1","0"); cupGrad.setAttribute("y1","0");
@@ -717,7 +786,6 @@
     defs.appendChild(clip);
     svg.appendChild(defs);
 
-    // base shadow
     const baseShadow = document.createElementNS("http://www.w3.org/2000/svg","ellipse");
     baseShadow.setAttribute("cx", W/2);
     baseShadow.setAttribute("cy", H-10);
@@ -726,7 +794,6 @@
     baseShadow.setAttribute("fill","rgba(0,0,0,.25)");
     svg.appendChild(baseShadow);
 
-    // cup body group
     const cupG = document.createElementNS("http://www.w3.org/2000/svg","g");
 
     const outer = document.createElementNS("http://www.w3.org/2000/svg","path");
@@ -776,15 +843,12 @@
 
     svg.appendChild(cupG);
 
-    // water group (clipped)
     const waterClipG = document.createElementNS("http://www.w3.org/2000/svg","g");
     waterClipG.setAttribute("clip-path", `url(#cupClip-${id})`);
 
-    // waterGroup that moves up/down by transform (for animation)
     const waterGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
     waterGroup.classList.add("waterGroup");
 
-    // big water rect fills entire inner; we move group downward for empty space
     const waterRect = document.createElementNS("http://www.w3.org/2000/svg","rect");
     waterRect.setAttribute("x", innerX);
     waterRect.setAttribute("y", innerY);
@@ -793,7 +857,6 @@
     waterRect.setAttribute("fill", `url(#waterGrad-${id})`);
     waterGroup.appendChild(waterRect);
 
-    // wave group (wiggle) - placed at the top of water; we update its Y
     const waveGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
     waveGroup.classList.add("waveWiggle");
 
@@ -808,7 +871,6 @@
     waterClipG.appendChild(waveGroup);
     svg.appendChild(waterClipG);
 
-    // ticks
     const tickG = document.createElementNS("http://www.w3.org/2000/svg","g");
     tickG.setAttribute("opacity",".95");
 
@@ -852,14 +914,16 @@
     jugCard.appendChild(svgWrap);
     jugCard.appendChild(amt);
 
-    // interactions
-    jugCard.addEventListener("click", () => onJugClick(jugIndex));
+    jugCard.addEventListener("click", (e) => {
+      if(state.isAutoSolving) return;
+      onJugClick(jugIndex);
+    });
     jugCard.addEventListener("keydown", (e) => {
+      if(state.isAutoSolving) return;
       if(e.key === "Enter" || e.key === " ") { e.preventDefault(); onJugClick(jugIndex); }
     });
 
-    // store refs for updates
-    const refs = {
+    return {
       jugCard,
       svgWrap,
       amtStrong,
@@ -868,9 +932,6 @@
       waveGroup,
       geom: { innerX, innerY, innerW, innerH },
     };
-
-    // initialize wave path once; y will be set by update
-    return refs;
   }
 
   function setWavePath(refs, waterTopY){
@@ -887,8 +948,6 @@
       C ${c1} ${waterTopY-amp}, ${c2} ${waterTopY+amp}, ${c3} ${waterTopY}
       C ${c4} ${waterTopY-amp}, ${c5} ${waterTopY+amp}, ${x1} ${waterTopY}`;
     refs.wavePath.setAttribute("d", d);
-
-    // position waveGroup (so its own wiggle doesn't move vertically)
     refs.waveGroup.setAttribute("transform", `translate(0,0)`);
   }
 
@@ -901,10 +960,9 @@
 
     const { innerY, innerH } = refs.geom;
     const waterH = (amt / cap) * innerH;
-    const offset = innerH - waterH; // translate down when less water
+    const offset = innerH - waterH;
     refs.waterGroup.style.transform = `translate(0px, ${offset}px)`;
 
-    // wave should sit at top of water (clamped within inner)
     const waterTopY = innerY + offset;
     setWavePath(refs, waterTopY);
   }
@@ -915,8 +973,7 @@
     const minC = Math.min(...caps);
     const maxC = Math.max(...caps);
 
-    // base height in px
-    const base = 230; // matches CSS default
+    const base = 230;
     const minScale = 0.80;
     const maxScale = 1.38;
 
@@ -925,7 +982,6 @@
       if(maxC !== minC) t = (caps[i] - minC) / (maxC - minC);
       const scale = minScale + (maxScale - minScale) * t;
       const h = Math.round(base * scale);
-
       state.jugUI[i].svgWrap.style.height = `${h}px`;
     }
   }
@@ -940,7 +996,6 @@
     state.loopDetected = false;
     loopBanner.style.display = "none";
 
-    // pour mode resets OFF at stage start (안전)
     state.pourMode = false;
     updatePourModeUI();
 
@@ -954,9 +1009,7 @@
     state.startMs = Date.now();
     startTimer();
 
-    // build jug UI once per stage
     buildJugUI();
-
     renderTopUI();
     renderModeSections();
   }
@@ -1003,10 +1056,8 @@
 
     applyJugSizing();
 
-    // initial water visuals
     for(let i=0;i<state.caps.length;i++){
       updateWaterVisual(i);
-      // selection class init
       state.jugUI[i].jugCard.classList.toggle("selected", state.selected === i);
     }
   }
@@ -1018,6 +1069,12 @@
     selectInfo.textContent = state.selected == null
       ? "선택: 없음"
       : `선택: ${state.selected+1}번 통 (${state.caps[state.selected]}L)`;
+  }
+
+  function cancelSelection(){
+    if(state.selected == null) return;
+    state.selected = null;
+    updateSelectionUI();
   }
 
   function updatePourModeUI(){
@@ -1052,7 +1109,6 @@
   }
 
   function onJugClick(i){
-    // 클릭은 기본적으로 "선택"
     if(state.selected == null){
       state.selected = i;
       updateSelectionUI();
@@ -1060,40 +1116,34 @@
     }
 
     if(state.selected === i){
-      // same jug: keep selected
       updateSelectionUI();
       return;
     }
 
     if(!state.pourMode){
-      // 선택 모드: 무조건 선택만 이동
       state.selected = i;
       updateSelectionUI();
       return;
     }
 
-    // 옮기기 모드 ON: 선택된 통에서 i로 옮기기 시도
     const from = state.selected;
     const to = i;
     const amount = canPourAmount(from, to);
 
     if(amount > 0){
-      // perform pour
       state.amounts[from] -= amount;
       state.amounts[to] += amount;
       addMoveAndCheckLoop();
 
-      // after pour, select destination (연속 작업 편의)
-      state.selected = to;
+      // ✅ A 반영: 옮기기 성공 후 선택 자동 취소
+      state.selected = null;
       updateSelectionUI();
 
-      // update visuals (애니메이션은 CSS transition이 담당)
       updateWaterVisual(from);
       updateWaterVisual(to);
 
       checkWin();
     }else{
-      // 옮기기 불가면 선택만 이동(실수 방지 + 흐름 유지)
       state.selected = to;
       updateSelectionUI();
     }
@@ -1182,10 +1232,7 @@
 
     const btnNext = el("button","good");
     btnNext.textContent = "다음";
-    btnNext.addEventListener("click", () => {
-      closeModal();
-      goNextNormalOrTier();
-    });
+    btnNext.addEventListener("click", () => { closeModal(); goNextNormalOrTier(); });
 
     showModal("스테이지 클리어!", body, [btnNext]);
   }
@@ -1210,10 +1257,7 @@
 
     const btnNext = el("button","good");
     btnNext.textContent = (state.idx === state.stages.length - 1) ? "결과 보기" : "다음";
-    btnNext.addEventListener("click", () => {
-      closeModal();
-      goNextHardOrEnd();
-    });
+    btnNext.addEventListener("click", () => { closeModal(); goNextHardOrEnd(); });
 
     showModal("완료", body, [btnNext]);
   }
@@ -1239,16 +1283,6 @@
     const avg = Math.round(rows.reduce((a,b)=>a+(b.score??0),0) / rows.length);
 
     const body = el("div");
-    const kpi = el("div","kpi");
-    const b1 = el("div","box");
-    b1.innerHTML = `<div class="label">${tier.name} 점수</div><div class="val">${avg} / 100</div>`;
-    const b2 = el("div","box");
-    b2.innerHTML = `<div class="label">${tier.name} 총 이동</div><div class="val">${rows.reduce((a,b)=>a+b.moves,0)}회</div>`;
-    const b3 = el("div","box");
-    b3.innerHTML = `<div class="label">${tier.name} 총 시간</div><div class="val">${msToMMSS(rows.reduce((a,b)=>a+b.timeMs,0))}</div>`;
-    kpi.append(b1,b2,b3);
-    body.appendChild(kpi);
-
     const p = el("p");
     p.textContent = `${tier.name}에서의 결과입니다. 스테이지별 이동 횟수와 시간을 확인해 보세요.`;
     body.appendChild(p);
@@ -1256,12 +1290,7 @@
     const table = el("table");
     table.innerHTML = `
       <thead>
-        <tr>
-          <th>스테이지</th>
-          <th>이동 횟수</th>
-          <th>클리어 시간</th>
-          <th>점수</th>
-        </tr>
+        <tr><th>스테이지</th><th>이동 횟수</th><th>클리어 시간</th><th>점수</th></tr>
       </thead>
       <tbody>
         ${rows.map(r => `
@@ -1297,44 +1326,13 @@
     const overall = Math.round(tierScores.reduce((a,b)=>a+b.avg,0)/tierScores.length);
 
     const body = el("div");
-    const kpi = el("div","kpi");
-    const b1 = el("div","box"); b1.innerHTML = `<div class="label">최종 점수</div><div class="val">${overall} / 100</div>`;
-    const b2 = el("div","box"); b2.innerHTML = `<div class="label">총 이동</div><div class="val">${rows.reduce((a,b)=>a+b.moves,0)}회</div>`;
-    const b3 = el("div","box"); b3.innerHTML = `<div class="label">총 시간</div><div class="val">${msToMMSS(rows.reduce((a,b)=>a+b.timeMs,0))}</div>`;
-    kpi.append(b1,b2,b3);
-    body.appendChild(kpi);
-
     const p = el("p");
-    p.textContent = "단계별 점수와 스테이지별 기록을 확인할 수 있습니다.";
+    p.textContent = `최종 점수: ${overall} / 100`;
     body.appendChild(p);
-
-    const table = el("table");
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th>단계</th>
-          <th>점수(평균)</th>
-          <th>스테이지</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${tierScores.map(t => `
-          <tr>
-            <td>${t.name}</td>
-            <td>${t.avg} / 100</td>
-            <td>${t.subset[0].stageIndex+1}–${t.subset[t.subset.length-1].stageIndex+1}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    `;
-    body.appendChild(table);
 
     const btnMenu = el("button","ghost");
     btnMenu.textContent = "메뉴로";
-    btnMenu.addEventListener("click", () => {
-      closeModal();
-      resetToMenu();
-    });
+    btnMenu.addEventListener("click", () => { closeModal(); resetToMenu(); });
 
     showModal("Normal 최종 결과", body, [btnMenu]);
   }
@@ -1354,23 +1352,13 @@
     const judged = rows.filter(r => r.resultType === "declare-impossible").length;
 
     const body = el("div");
-    const kpi = el("div","kpi");
-    const b1 = el("div","box"); b1.innerHTML = `<div class="label">목표 달성</div><div class="val">${solved}개</div>`;
-    const b2 = el("div","box"); b2.innerHTML = `<div class="label">불가능 판단</div><div class="val">${judged}개</div>`;
-    const b3 = el("div","box"); b3.innerHTML = `<div class="label">총 시간</div><div class="val">${msToMMSS(rows.reduce((a,b)=>a+b.timeMs,0))}</div>`;
-    kpi.append(b1,b2,b3);
-    body.appendChild(kpi);
-
     const p = el("p");
-    p.textContent = "Hard 모드는 정답을 만드는 것뿐 아니라, 가능한지 불가능한지 판단하는 힘이 중요합니다.";
+    p.textContent = `목표 달성 ${solved}개 / 불가능 판단 ${judged}개`;
     body.appendChild(p);
 
     const btnMenu = el("button","ghost");
     btnMenu.textContent = "메뉴로";
-    btnMenu.addEventListener("click", () => {
-      closeModal();
-      resetToMenu();
-    });
+    btnMenu.addEventListener("click", () => { closeModal(); resetToMenu(); });
 
     showModal("Hard 결과", body, [btnMenu]);
   }
@@ -1387,9 +1375,7 @@
     stopTimer();
 
     const body = el("div");
-    const p = el("p");
-    p.textContent = "이 문제가 불가능하다고 생각한 이유는 무엇인가요?";
-    body.appendChild(p);
+    body.appendChild(Object.assign(el("p"), {textContent:"이 문제가 불가능하다고 생각한 이유는 무엇인가요?"}));
 
     const opts = [
       "아무리 해도 물의 양이 같은 방식으로만 바뀌어, 목표한 양이 나오지 않는다.",
@@ -1485,6 +1471,115 @@
     setScreen("start");
   }
 
+  // ---------- NEW: 배경 클릭으로 선택 취소 ----------
+  jugPanel.addEventListener("click", (e) => {
+    if(state.isAutoSolving) return;
+    // 물통(.jug) 클릭은 제외
+    if(e.target.closest(".jug")) return;
+    // 버튼/입력 요소 클릭은 제외(원치 않는 취소 방지)
+    if(e.target.closest("button")) return;
+    // 그 외 패널 빈 공간 클릭이면 선택 취소
+    cancelSelection();
+  });
+
+  // ---------- DEV HOTKEYS ----------
+  const DEV_KEYS = new Set(["₩","`","~","\\"]);
+  let devHeld = false;
+
+  function isDevKeyEvent(e){
+    // 키보드마다 e.key가 다르게 들어올 수 있어 code도 함께 체크
+    if(e.code === "Backquote") return true; // 숫자 1 왼쪽 키(대부분)
+    return DEV_KEYS.has(e.key);
+  }
+
+  function devMoveStage(delta){
+    if(gameScreen.style.display === "none") return; // 게임 중일 때만
+    if(state.isAutoSolving) return;
+    const next = Math.max(0, Math.min(state.stages.length - 1, state.idx + delta));
+    if(next === state.idx) return;
+    state.idx = next;
+    loadStage();
+  }
+
+  function devForceClear(){
+    if(gameScreen.style.display === "none") return;
+    if(state.isAutoSolving) return;
+
+    const path = bfsPath(state.caps, state.goal);
+    if(!path){
+      const body = el("div");
+      body.appendChild(Object.assign(el("p"), {textContent:"이 스테이지는 해결할 수 없는 문제라서 자동 클리어를 실행할 수 없습니다."}));
+      const btn = el("button","ghost"); btn.textContent="닫기";
+      btn.addEventListener("click", closeModal);
+      showModal("자동 클리어 불가", body, [btn]);
+      return;
+    }
+
+    // 자동 풀이 애니메이션 시작
+    state.isAutoSolving = true;
+    cancelSelection();
+    state.pourMode = false;
+    updatePourModeUI();
+
+    // 이동/시간은 '보여주기'가 목적이므로, 이동 횟수는 path 기반으로 갱신(개발자용)
+    // (원하면 여기서 moves 누적 대신 별도 표기로 바꿀 수도 있음)
+    const startMoves = state.moves;
+    const startTimeMs = Date.now() - state.startMs;
+
+    let step = 0;
+    const interval = 450;
+
+    const tick = () => {
+      if(step >= path.length){
+        // 끝: 기록상 깔끔하게 맞추기
+        state.isAutoSolving = false;
+        // 개발자 클리어는 "최소 경로 길이-1" 정도로 맞춤
+        state.moves = (path.length - 1);
+        movesText.textContent = String(state.moves);
+        endStage({type:"solve"});
+        return;
+      }
+
+      state.amounts = path[step].slice();
+      // 시각 업데이트
+      for(let i=0;i<state.caps.length;i++) updateWaterVisual(i);
+
+      // 루프 체크/표시는 생략(개발자용)
+      step += 1;
+      setTimeout(tick, interval);
+    };
+
+    tick();
+  }
+
+  document.addEventListener("keydown", (e) => {
+    // 모달이 떠 있으면 키 입력으로 스테이지 이동/클리어가 튀지 않게 막음(개발자용 안정)
+    if(modalOverlay.style.display === "flex") return;
+
+    if(isDevKeyEvent(e)){
+      devHeld = true;
+      return;
+    }
+    if(!devHeld) return;
+
+    if(e.key === "ArrowLeft"){
+      e.preventDefault();
+      devMoveStage(-1);
+    }else if(e.key === "ArrowRight"){
+      e.preventDefault();
+      devMoveStage(+1);
+    }else if(e.key === "Enter"){
+      e.preventDefault();
+      devForceClear();
+    }
+  });
+
+  document.addEventListener("keyup", (e) => {
+    if(isDevKeyEvent(e)){
+      devHeld = false;
+    }
+  });
+
   // ---------- Events ----------
   $("#btnStartNormal").addEventListener("click", () => {
     state.mode = "normal";
@@ -1506,16 +1601,11 @@
 
   $("#btnBackToMenu").addEventListener("click", () => {
     const body = el("div");
-    const p = el("p");
-    p.textContent = "메뉴로 돌아가면 현재 진행 중인 기록은 종료됩니다.";
-    body.appendChild(p);
+    body.appendChild(Object.assign(el("p"), {textContent:"메뉴로 돌아가면 현재 진행 중인 기록은 종료됩니다."}));
 
     const btnYes = el("button","bad");
     btnYes.textContent = "메뉴로";
-    btnYes.addEventListener("click", () => {
-      closeModal();
-      resetToMenu();
-    });
+    btnYes.addEventListener("click", () => { closeModal(); resetToMenu(); });
 
     const btnNo = el("button","good");
     btnNo.textContent = "계속하기";
@@ -1526,16 +1616,11 @@
 
   $("#btnReset").addEventListener("click", () => {
     const body = el("div");
-    const p = el("p");
-    p.textContent = "이 스테이지를 처음부터 다시 시작할까요?";
-    body.appendChild(p);
+    body.appendChild(Object.assign(el("p"), {textContent:"이 스테이지를 처음부터 다시 시작할까요?"}));
 
     const btnYes = el("button","warn");
     btnYes.textContent = "리셋";
-    btnYes.addEventListener("click", () => {
-      closeModal();
-      resetStageState();
-    });
+    btnYes.addEventListener("click", () => { closeModal(); resetStageState(); });
 
     const btnNo = el("button","ghost");
     btnNo.textContent = "취소";
@@ -1544,16 +1629,11 @@
     showModal("스테이지 리셋", body, [btnNo, btnYes]);
   });
 
-  $("#btnFill").addEventListener("click", () => {
-    fillSelected();
-    renderTopUI();
-  });
-  $("#btnEmpty").addEventListener("click", () => {
-    emptySelected();
-    renderTopUI();
-  });
+  $("#btnFill").addEventListener("click", () => { if(!state.isAutoSolving){ fillSelected(); renderTopUI(); }});
+  $("#btnEmpty").addEventListener("click", () => { if(!state.isAutoSolving){ emptySelected(); renderTopUI(); }});
 
   btnPourMode.addEventListener("click", () => {
+    if(state.isAutoSolving) return;
     state.pourMode = !state.pourMode;
     updatePourModeUI();
   });
