@@ -1,1703 +1,1343 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>물통 미션: 정확한 물의 양 만들기</title>
-<style>
-  :root{
-    --bg:#0b1220;
-    --ink:#e7eefc;
-    --muted:#b8c7f3;
-    --line:rgba(255,255,255,.12);
-    --accent:#6ee7ff;
-    --good:#22c55e;
-    --warn:#fbbf24;
-    --bad:#fb7185;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>물통 퍼즐</title>
+  <style>
+    :root {
+      --bg1: #eef7ff;
+      --bg2: #dff1ff;
+      --panel: rgba(255,255,255,0.86);
+      --panel-strong: rgba(255,255,255,0.94);
+      --ink: #15324a;
+      --muted: #5d7388;
+      --line: #cfe0ee;
+      --blue: #4ea8ff;
+      --blue-deep: #2d7fe0;
+      --water-top: #90d5ff;
+      --water-mid: #5ab7ff;
+      --water-bot: #278dff;
+      --success: #19a35b;
+      --warning: #e6f2ff;
+      --shadow: 0 18px 40px rgba(42, 98, 146, 0.14);
+      --radius: 22px;
+    }
 
-    --cup-stroke: rgba(255,255,255,.22);
-    --tick: rgba(255,255,255,.28);
-    --tickText: rgba(231,238,252,.78);
-    --waterTop: rgba(110,231,255,.85);
-    --waterBottom: rgba(110,231,255,.28);
-    --waterEdge: rgba(255,255,255,.22);
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, sans-serif;
-    background: radial-gradient(1200px 600px at 20% 10%, rgba(110,231,255,.10), transparent 55%),
-                radial-gradient(900px 500px at 80% 15%, rgba(34,197,94,.08), transparent 55%),
-                radial-gradient(1000px 600px at 50% 95%, rgba(251,113,133,.10), transparent 60%),
-                var(--bg);
-    color:var(--ink);
-    min-height:100vh;
-  }
-  .wrap{max-width:1040px;margin:0 auto;padding:22px}
-  .card{
-    background: linear-gradient(180deg, rgba(16,26,46,.92), rgba(12,20,40,.92));
-    border:1px solid var(--line);
-    border-radius:18px;
-    box-shadow: 0 18px 40px rgba(0,0,0,.35);
-    overflow:hidden;
-  }
+    * { box-sizing: border-box; }
 
-  /* 상단 UX 개선 */
-  .topbar{
-    padding:16px 18px;
-    border-bottom:1px solid var(--line);
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:14px;
-  }
-  .title{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    min-width:260px;
-  }
-  .title .modeLine{
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  }
-  .title h1{
-    margin:0;
-    font-size:22px;
-    letter-spacing:.2px;
-    line-height:1.1;
-  }
-  .sub{
-    margin:0;
-    color:var(--muted);
-    font-size:12px;
-    line-height:1.35;
-  }
-  .badge{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding:6px 10px;
-    border-radius:999px;
-    border:1px solid var(--line);
-    background: rgba(255,255,255,.04);
-    font-size:12px;
-    color:var(--muted);
-    white-space:nowrap;
-  }
-  .badge strong{color:var(--ink)}
-  .badge.accent{
-    border-color: rgba(110,231,255,.45);
-    background: rgba(110,231,255,.10);
-  }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.9), transparent 35%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow-x: hidden;
+    }
 
-  .kpiRow{
-    display:flex;
-    align-items:flex-end;
-    gap:10px;
-    flex-wrap:wrap;
-    justify-content:flex-end;
-  }
-  .kpi{
-    border:1px solid var(--line);
-    background: rgba(255,255,255,.03);
-    border-radius:14px;
-    padding:10px 12px;
-    min-width:112px;
-  }
-  .kpi .label{font-size:11px;color:var(--muted)}
-  .kpi .val{margin-top:2px;font-size:16px;font-weight:900}
-  .kpi.goal{
-    border-color: rgba(110,231,255,.55);
-    background: rgba(110,231,255,.12);
-  }
-  .kpi.goal .val{font-size:18px}
-  .kpi.small{min-width:100px}
+    button {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.2s ease, opacity 0.2s ease;
+    }
 
-  .grid{
-    display:grid;
-    grid-template-columns: 1.2fr .8fr;
-    gap:14px;
-    padding:14px;
-  }
-  @media (max-width: 900px){
-    .grid{grid-template-columns:1fr}
-    .topbar{align-items:flex-start}
-    .kpiRow{justify-content:flex-start}
-  }
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(44, 110, 173, 0.16);
+    }
 
-  .panel{
-    background: rgba(255,255,255,.03);
-    border:1px solid var(--line);
-    border-radius:16px;
-    padding:14px;
-  }
-  .panel h2{
-    margin:0 0 10px 0;
-    font-size:14px;color:var(--muted);
-    font-weight:800;
-    letter-spacing:.2px;
-  }
-  .btnrow{display:flex;flex-wrap:wrap;gap:10px}
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
 
-  button{
-    appearance:none;border:1px solid var(--line);
-    background: rgba(255,255,255,.04);
-    color:var(--ink);
-    padding:10px 12px;border-radius:12px;
-    cursor:pointer;
-    font-weight:800;
-    transition:.15s transform ease, .15s background ease, .15s border-color ease, .15s opacity ease;
-  }
-  button:hover{transform: translateY(-1px); background: rgba(255,255,255,.06)}
-  button:active{transform: translateY(0px)}
-  button.primary{
-    border-color: rgba(110,231,255,.35);
-    background: rgba(110,231,255,.10);
-  }
-  button.good{
-    border-color: rgba(34,197,94,.35);
-    background: rgba(34,197,94,.10);
-  }
-  button.warn{
-    border-color: rgba(251,191,36,.38);
-    background: rgba(251,191,36,.10);
-  }
-  button.bad{
-    border-color: rgba(251,113,133,.38);
-    background: rgba(251,113,133,.10);
-  }
-  button.ghost{background: transparent;}
-  button:disabled{opacity:.45; cursor:not-allowed;}
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
 
-  .statusMini{
-    margin-top:8px;
-    display:flex;gap:10px;flex-wrap:wrap;
-    color:var(--muted);
-    font-size:12px;
-  }
-  .statusMini .dot{
-    border:1px solid var(--line);
-    background: rgba(255,255,255,.03);
-    padding:6px 10px;
-    border-radius:999px;
-  }
+    .app {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
 
-  /* Jugs layout */
-  .jugs{
-    display:flex; gap:12px; justify-content:center; align-items:flex-end;
-    padding:10px 6px 6px 6px;
-    min-height:340px;
-  }
-  .jug{
-    border:1px solid var(--line);
-    background: rgba(255,255,255,.03);
-    border-radius:16px;
-    padding:10px;
-    position:relative;
-    user-select:none;
-    cursor:pointer;
-    transition: .15s transform ease, .15s border-color ease, .15s background ease;
-    display:flex;
-    flex-direction:column;
-    justify-content:flex-end;
-  }
-  .jug:hover{transform: translateY(-2px); background: rgba(255,255,255,.05)}
-  .jug.selected{
-    border-color: rgba(110,231,255,.55);
-    box-shadow: 0 0 0 3px rgba(110,231,255,.15);
-  }
-  .jug .cap{
-    display:flex; align-items:center; justify-content:space-between;
-    font-size:12px; color:var(--muted); margin-bottom:8px;
-  }
-  .jug .cap strong{color:var(--ink); font-size:12px}
+    .shell {
+      width: min(1200px, 100%);
+      height: min(860px, calc(100vh - 20px));
+      min-height: 0;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.9);
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+      overflow: hidden;
+      position: relative;
+      backdrop-filter: blur(10px);
+    }
 
-  .jugSvgWrap{
-    width:100%;
-    display:flex;
-    align-items:flex-end;
-    justify-content:center;
-    border-radius:12px;
-    background: rgba(0,0,0,.10);
-    border:1px solid rgba(255,255,255,.08);
-    overflow:hidden;
-    height:230px;
-  }
-  .jugSvgWrap svg{display:block; width:100%; height:100%}
+    .screen {
+      height: 100%;
+      min-height: 0;
+      display: none;
+    }
 
-  .waterGroup{
-    transition: transform .38s ease;
-    will-change: transform;
-  }
-  @keyframes waveDrift {
-    0%   { transform: translateX(0px); }
-    50%  { transform: translateX(2px); }
-    100% { transform: translateX(0px); }
-  }
-  .waveWiggle{
-    animation: waveDrift 4.2s ease-in-out infinite;
-    transform-origin: center;
-  }
+    .screen.active {
+      display: flex;
+    }
 
-  .amt{
-    margin-top:8px;
-    display:flex; justify-content:space-between; align-items:center;
-    font-size:12px; color:var(--muted);
-  }
-  .amt strong{color:var(--ink)}
+    .start-screen,
+    .summary-screen {
+      align-items: center;
+      justify-content: center;
+      padding: 26px;
+    }
 
-  .banner{
-    margin-top:10px;
-    padding:10px 12px;
-    border-radius:12px;
-    border:1px solid var(--line);
-    background: rgba(255,255,255,.04);
-    color:var(--muted);
-    font-size:13px; line-height:1.45;
-  }
-  .banner.warn{border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.08)}
-  .banner.bad{border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.08)}
-  .row{
-    display:flex; align-items:center; justify-content:space-between;
-    gap:10px; flex-wrap:wrap;
-  }
-  .hintbox{
-    margin-top:10px;
-    border:1px dashed rgba(110,231,255,.28);
-    background: rgba(110,231,255,.06);
-    padding:10px 12px;border-radius:12px;
-    color:var(--muted);
-    font-size:13px; line-height:1.45;
-    min-height:46px;
-  }
-  .tiny{font-size:12px;color:var(--muted);line-height:1.45}
-  .divider{height:1px;background:var(--line);margin:14px 0}
+    .hero,
+    .summary-card {
+      width: min(760px, 100%);
+      background: var(--panel-strong);
+      border: 1px solid rgba(255,255,255,0.95);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      padding: 34px 28px;
+      text-align: center;
+    }
 
-  /* Modal */
-  .modalOverlay{
-    position:fixed; inset:0;
-    background: rgba(0,0,0,.55);
-    display:none;
-    align-items:center; justify-content:center;
-    padding:18px;
-    z-index:50;
-  }
-  .modal{
-    width:min(920px, 100%);
-    background: linear-gradient(180deg, rgba(16,26,46,.96), rgba(12,20,40,.96));
-    border:1px solid var(--line);
-    border-radius:18px;
-    box-shadow: 0 22px 60px rgba(0,0,0,.55);
-    overflow:hidden;
-  }
-  .modalHeader{
-    padding:14px 16px;
-    border-bottom:1px solid var(--line);
-    display:flex;align-items:center;justify-content:space-between;
-    gap:12px;
-  }
-  .modalHeader h3{margin:0;font-size:14px}
-  .modalBody{padding:14px 16px}
-  .modalBody p{margin:0 0 10px 0; color:var(--muted); line-height:1.55; font-size:13px}
-  table{
-    width:100%;
-    border-collapse:collapse;
-    overflow:hidden;
-    border-radius:14px;
-    border:1px solid var(--line);
-  }
-  th, td{
-    padding:10px 10px;
-    border-bottom:1px solid var(--line);
-    font-size:13px;
-    text-align:left;
-  }
-  th{color:var(--muted); background: rgba(255,255,255,.03)}
-  tr:last-child td{border-bottom:none}
-  .kpiGrid{
-    display:grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap:10px;
-    margin-bottom:12px;
-  }
-  @media (max-width: 720px){
-    .kpiGrid{grid-template-columns:1fr}
-  }
-  .kpiBox{
-    border:1px solid var(--line);
-    background: rgba(255,255,255,.03);
-    border-radius:14px;
-    padding:10px 12px;
-  }
-  .kpiBox .label{font-size:12px;color:var(--muted)}
-  .kpiBox .val{font-size:22px;font-weight:950;margin-top:4px}
-  .kpiBox.big{
-    border-color: rgba(110,231,255,.55);
-    background: rgba(110,231,255,.10);
-  }
-  .footerRow{
-    display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;
-    padding:12px 16px;
-    border-top:1px solid var(--line);
-  }
+    .hero h1,
+    .summary-card h1 {
+      margin: 0 0 12px;
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 1.1;
+    }
 
-  .start{padding:18px;}
-  .modeCard{
-    border:1px solid var(--line);
-    background: rgba(255,255,255,.03);
-    border-radius:16px;
-    padding:14px;
-  }
-  .modeCard h3{margin:0 0 6px 0;font-size:15px}
-  .modeCard p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
-  .modeCard .btnrow{margin-top:12px}
-</style>
+    .hero p,
+    .summary-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 17px;
+    }
+
+    .hero .tips {
+      margin: 28px auto 0;
+      text-align: left;
+      background: linear-gradient(180deg, rgba(237,247,255,0.95), rgba(251,254,255,0.95));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px 18px 16px;
+    }
+
+    .hero .tips h2 {
+      font-size: 18px;
+      margin: 0 0 10px;
+    }
+
+    .hero .tips ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .primary-btn {
+      background: linear-gradient(180deg, var(--blue), var(--blue-deep));
+      color: white;
+      min-width: 180px;
+      margin-top: 26px;
+    }
+
+    .game-screen {
+      flex-direction: column;
+      padding: 12px;
+      gap: 10px;
+      height: 100%;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: 1.8fr 0.8fr;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .panel {
+      background: var(--panel-strong);
+      border: 1px solid rgba(255,255,255,0.95);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(44, 110, 173, 0.1);
+    }
+
+    .stage-panel {
+      padding: 14px 16px;
+    }
+
+    .stage-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .stage-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ecf6ff;
+      border: 1px solid #d5e8fb;
+      color: var(--blue-deep);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .goal {
+      margin-top: 10px;
+      background: linear-gradient(180deg, #f4fbff, #e9f5ff);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 12px 14px;
+    }
+
+    .goal .label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .goal .value {
+      margin-top: 4px;
+      font-size: clamp(24px, 3.2vw, 36px);
+      font-weight: 900;
+      color: var(--blue-deep);
+    }
+
+    .goal .desc {
+      margin-top: 4px;
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: 13px;
+    }
+
+    .stats-panel {
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      align-content: start;
+    }
+
+    .stat-box {
+      border-radius: 16px;
+      padding: 10px 8px;
+      background: linear-gradient(180deg, #f7fbff, #edf6ff);
+      border: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .stat-box .k {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .stat-box .v {
+      margin-top: 4px;
+      font-size: clamp(18px, 2.4vw, 28px);
+      font-weight: 900;
+    }
+
+    .play-area {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .jugs-panel {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .jugs-wrap {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: clamp(12px, 2.6vw, 28px);
+      padding: 12px 14px 8px;
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.65), rgba(240,248,255,0.75)),
+        linear-gradient(180deg, rgba(214,236,255,0.6), rgba(252,254,255,0.6));
+      border-radius: 24px;
+      border: 1px solid rgba(222,236,247,0.95);
+      overflow: hidden;
+    }
+
+    .jug-card {
+      flex: 0 1 200px;
+      width: min(180px, 24vw);
+      text-align: center;
+      user-select: none;
+    }
+
+    .jug-top-label {
+      margin-bottom: 8px;
+      font-weight: 800;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .jug {
+      position: relative;
+      margin: 0 auto;
+      width: min(112px, 14vw);
+      border: 5px solid #6e8da8;
+      border-top-width: 12px;
+      border-radius: 18px 18px 24px 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(239,248,255,0.82));
+      overflow: hidden;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.55), 0 14px 24px rgba(42, 98, 146, 0.12);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      cursor: pointer;
+    }
+
+    .jug::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(255,255,255,0.52), rgba(255,255,255,0.05) 34%, rgba(255,255,255,0.18) 70%, rgba(255,255,255,0.04));
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .jug::after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: -12px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(80, 134, 177, 0.12);
+      filter: blur(5px);
+      z-index: 0;
+    }
+
+    .jug.selected {
+      transform: translateY(-8px);
+      border-color: var(--blue-deep);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.55), 0 20px 32px rgba(45, 127, 224, 0.24);
+    }
+
+    .jug.disabled {
+      cursor: default;
+    }
+
+    .jug-mouth {
+      position: absolute;
+      top: -10px;
+      left: 17px;
+      right: 17px;
+      height: 12px;
+      border-radius: 12px 12px 6px 6px;
+      background: linear-gradient(180deg, #7e9ab3, #68849d);
+      z-index: 4;
+    }
+
+    .water {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, var(--water-top), var(--water-mid) 45%, var(--water-bot));
+      border-radius: 12px 12px 18px 18px;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .water::before {
+      content: "";
+      position: absolute;
+      top: -9px;
+      left: -5%;
+      width: 110%;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.34);
+      opacity: 0.9;
+    }
+
+    .water::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.16), transparent 40%, rgba(255,255,255,0.06));
+      mix-blend-mode: screen;
+    }
+
+    .jug-info {
+      margin-top: 8px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .amount {
+      font-size: clamp(20px, 2.2vw, 24px);
+      font-weight: 900;
+    }
+
+    .caption {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .control-panel {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .control-panel h3,
+    .summary-card h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .helper-box,
+    .btn-stack,
+    .status-box {
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #f9fcff, #eef7ff);
+      padding: 12px;
+    }
+
+    .helper-box p,
+    .status-box p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .selected-display {
+      margin-top: 10px;
+      font-weight: 900;
+      color: var(--blue-deep);
+      min-height: 24px;
+    }
+
+    .btn-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .action-btn {
+      background: white;
+      border: 1px solid #d5e6f6;
+      color: var(--ink);
+    }
+
+    .secondary-btn {
+      background: #eef6ff;
+      border: 1px solid #d0e3f6;
+      color: var(--blue-deep);
+    }
+
+    .status-box .status-title {
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 8px;
+    }
+
+    .message {
+      min-height: 42px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 36, 53, 0.42);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+      backdrop-filter: blur(6px);
+    }
+
+    .overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      width: min(460px, 100%);
+      background: rgba(255,255,255,0.97);
+      border-radius: 28px;
+      border: 1px solid rgba(255,255,255,0.92);
+      padding: 28px 24px;
+      box-shadow: 0 24px 50px rgba(16, 45, 73, 0.22);
+      text-align: center;
+    }
+
+    .modal h2 {
+      margin: 0 0 10px;
+      font-size: 34px;
+    }
+
+    .modal p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .modal-stats {
+      margin: 18px 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .modal-stat {
+      background: #f2f9ff;
+      border: 1px solid #d7e8f9;
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .modal-stat .k {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .modal-stat .v {
+      margin-top: 8px;
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .summary-list {
+      margin-top: 24px;
+      display: grid;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .summary-row {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr 0.9fr;
+      gap: 10px;
+      align-items: center;
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #f9fcff, #edf7ff);
+    }
+
+    .summary-row .stage-name {
+      font-weight: 900;
+    }
+
+    .summary-row .sub {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .summary-metric {
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .summary-head {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr 0.9fr;
+      gap: 10px;
+      padding: 0 4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .totals {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .total-box {
+      padding: 16px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #edf8ff, #e4f2ff);
+      border: 1px solid var(--line);
+      font-weight: 900;
+    }
+
+    .demo-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #eef6ff;
+      border: 1px solid #d3e5f7;
+      color: var(--blue-deep);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    @media (max-width: 920px) {
+      .hud,
+      .play-area {
+        grid-template-columns: 1fr;
+      }
+
+      .play-area {
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
+
+      .jugs-panel {
+        min-height: 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app { padding: 0; }
+      .shell,
+      .screen { height: 100vh; border-radius: 0; }
+      .stage-row { align-items: flex-start; }
+      .summary-row,
+      .summary-head { grid-template-columns: 1fr; }
+      .stats-panel,
+      .modal-stats,
+      .totals { grid-template-columns: 1fr; }
+      .jug-card { width: 144px; }
+      .jug { width: 102px; }
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-
-    <!-- Start Screen -->
-    <div id="startScreen">
-      <div class="topbar">
-        <div class="title">
-          <div class="modeLine">
-            <h1 style="margin:0">물통 미션</h1>
-            <span class="badge"><strong>v1.4</strong> (UX+난이도정렬+하드패널티)</span>
+  <div class="app">
+    <div class="shell">
+      <section id="startScreen" class="screen start-screen active">
+        <div class="hero">
+          <h1>물통 퍼즐</h1>
+          <p>
+            물통을 클릭해 물을 채우고, 비우고, 서로 옮기면서 목표한 양을 정확히 만들어 보세요.<br />
+            스테이지마다 이동 횟수와 시간이 기록되고, 마지막에는 전체 결과가 요약됩니다.
+          </p>
+          <div class="tips">
+            <h2>조작 방법</h2>
+            <ul>
+              <li>물통 하나를 클릭하면 선택됩니다.</li>
+              <li>선택된 상태에서 다른 물통을 클릭하면 물이 최대한 자동으로 옮겨집니다.</li>
+              <li><strong>채우기</strong>와 <strong>비우기</strong> 버튼으로 선택된 물통을 조작할 수 있습니다.</li>
+              <li>어느 물통이든 목표량이 정확히 나오면 클리어입니다.</li>
+            </ul>
           </div>
-          <p class="sub">물을 옮겨 목표한 양을 만들어 보세요.</p>
+          <button id="startBtn" class="primary-btn">시작하기</button>
         </div>
-        <div class="kpiRow">
-          <div class="badge accent"><strong>Normal</strong> 20스테이지</div>
-          <div class="badge"><strong>Hard</strong> 10스테이지</div>
-        </div>
-      </div>
+      </section>
 
-      <div class="start">
-        <div class="grid" style="padding:0">
-          <div class="modeCard">
-            <h3>Normal 모드</h3>
-            <p>
-              <strong>정확한 물의 양을 만드는 연습</strong>입니다.<br/>
-              힌트가 있으며, <strong>이동을 줄일수록 높은 점수(100점 만점)</strong>를 얻습니다.
-            </p>
-            <div class="btnrow">
-              <button class="primary" id="btnStartNormal">Normal 시작하기</button>
+      <section id="gameScreen" class="screen game-screen">
+        <div class="hud">
+          <div class="panel stage-panel">
+            <div class="stage-row">
+              <div>
+                <div id="stageBadge" class="stage-badge">Stage 1 / 5</div>
+                <h2 id="stageTitle" style="margin:8px 0 0;font-size:24px;line-height:1.15;">6L 만들기</h2>
+              </div>
+              <div id="capacitiesHint" style="font-weight:800;color:var(--muted);font-size:14px;">물통: 3L / 9L</div>
             </div>
-            <div class="divider"></div>
-            <div class="tiny">
-              • 모든 문제는 해결할 수 있습니다.<br/>
-              • 난이도 순서로 자동 정렬됩니다.
+            <div class="goal">
+              <div class="label">목표</div>
+              <div id="goalValue" class="value">6L</div>
+              <div id="goalDesc" class="desc">어느 물통이든 정확히 6L를 만들면 됩니다.</div>
             </div>
           </div>
 
-          <div class="modeCard">
-            <h3>Hard 모드</h3>
-            <p>
-              <strong>해결할 수 없는 문제</strong>도 포함되어 있습니다.<br/>
-              “불가능”을 눌렀는데 틀리면 <strong>1스테이지로 돌아가는 패널티</strong>가 있습니다.
-            </p>
-            <div class="btnrow" style="margin-top:12px">
-              <button class="bad" id="btnStartHard">Hard 도전하기</button>
+          <div class="panel stats-panel">
+            <div class="stat-box">
+              <div class="k">이동 횟수</div>
+              <div id="moveCount" class="v">0</div>
             </div>
-            <div class="divider"></div>
-            <div class="tiny">
-              • 힌트 없음 / 점수 표시 없음(판단 중심)<br/>
-              • 난이도 순서로 자동 정렬됩니다.
+            <div class="stat-box">
+              <div class="k">경과 시간</div>
+              <div id="timeCount" class="v">00:00.0</div>
             </div>
           </div>
         </div>
 
-        <div class="divider"></div>
-        <div class="tiny">
-          이 게임은 <strong>정답뿐만 아니라 시도와 판단</strong>을 중요하게 봅니다.
+        <div class="play-area">
+          <div class="panel jugs-panel">
+            <div id="jugsWrap" class="jugs-wrap"></div>
+          </div>
+
+          <aside class="panel control-panel">
+            <h3>조작</h3>
+            <div class="helper-box">
+              <p>
+                먼저 물통을 선택한 뒤 버튼을 누르거나, 다른 물통을 클릭해 물을 옮기세요.
+              </p>
+              <div id="selectedDisplay" class="selected-display">선택된 물통 없음</div>
+            </div>
+
+            <div class="btn-stack">
+              <button id="fillBtn" class="action-btn">선택한 물통 채우기</button>
+              <button id="emptyBtn" class="action-btn">선택한 물통 비우기</button>
+              <button id="resetBtn" class="secondary-btn">현재 스테이지 리셋</button>
+            </div>
+
+            <div class="status-box">
+              <div class="status-title">상태</div>
+              <p id="message" class="message">스테이지를 시작했습니다.</p>
+            </div>
+          </aside>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- Game Screen -->
-    <div id="gameScreen" style="display:none">
-      <div class="topbar">
-        <div class="title">
-          <div class="modeLine">
-            <h1 id="modeTitle" style="margin:0">Normal</h1>
-            <span class="badge accent" id="tierBadge">초급</span>
-            <span class="badge" id="progressBadge">1 / 20</span>
+      <section id="summaryScreen" class="screen summary-screen">
+        <div class="summary-card">
+          <h1>전체 결과 요약</h1>
+          <p>모든 스테이지를 완료했습니다. 각 스테이지의 기록과 전체 합계를 확인해 보세요.</p>
+
+          <div class="summary-head">
+            <div>스테이지</div>
+            <div>이동 횟수</div>
+            <div>걸린 시간</div>
           </div>
-          <p class="sub" id="stageDesc">설명</p>
+          <div id="summaryList" class="summary-list"></div>
+
+          <div class="totals">
+            <div class="total-box">총 이동 횟수: <span id="totalMoves">0</span></div>
+            <div class="total-box">총 걸린 시간: <span id="totalTime">00:00.0</span></div>
+          </div>
+
+          <button id="restartBtn" class="primary-btn">처음부터 다시하기</button>
         </div>
+      </section>
 
-        <div class="kpiRow">
-          <div class="kpi goal">
-            <div class="label">목표</div>
-            <div class="val" id="goalText">4L</div>
-          </div>
-          <div class="kpi small">
-            <div class="label">스테이지</div>
-            <div class="val" id="stageNo">1</div>
-          </div>
-          <div class="kpi small">
-            <div class="label">이동</div>
-            <div class="val" id="movesText">0</div>
-          </div>
-          <div class="kpi small">
-            <div class="label">시간</div>
-            <div class="val" id="timeText">00:00</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid">
-        <!-- LEFT PANEL -->
-        <div class="panel" id="jugPanel">
-          <h2>물통</h2>
-          <div class="banner" id="instructionBanner">
-            통을 누르면 선택됩니다. 선택된 통이 있을 때 다른 통을 누르면 <strong>물 옮기기</strong>를 시도합니다.<br/>
-            빈 공간을 누르면 선택이 취소됩니다.
-          </div>
-
-          <div class="jugs" id="jugs"></div>
-
-          <div class="row">
-            <div class="tiny" id="selectInfo">선택: 없음</div>
-            <div class="btnrow">
-              <button id="btnReset" class="ghost">스테이지 리셋</button>
-              <button id="btnBackToMenu" class="ghost">메뉴</button>
+      <div id="clearOverlay" class="overlay">
+        <div class="modal">
+          <h2>클리어!</h2>
+          <p id="clearText">목표한 양을 정확히 만들었습니다.</p>
+          <div class="modal-stats">
+            <div class="modal-stat">
+              <div class="k">이동 횟수</div>
+              <div id="clearMoves" class="v">0</div>
+            </div>
+            <div class="modal-stat">
+              <div class="k">걸린 시간</div>
+              <div id="clearTime" class="v">00:00.0</div>
             </div>
           </div>
-
-          <div class="banner warn" id="loopBanner" style="display:none;margin-top:10px">
-            같은 물 상태가 반복되는 것 같습니다. 다른 방법을 시도해 보세요.
-          </div>
-        </div>
-
-        <div class="panel">
-          <h2>조작</h2>
-          <div class="btnrow">
-            <button id="btnFill" class="primary">채우기</button>
-            <button id="btnEmpty">비우기</button>
-            <button id="btnDeclareImpossible" class="bad" style="display:none">불가능</button>
-          </div>
-
-          <div class="statusMini">
-            <div class="dot" id="modeStateText">현재: 선택</div>
-          </div>
-
-          <div id="normalHintArea" style="margin-top:12px; display:none">
-            <div class="row">
-              <h2 style="margin:0;color:var(--muted);font-size:14px">힌트</h2>
-              <button id="btnHint" class="warn">힌트 보기</button>
-            </div>
-            <div class="hintbox" id="hintBox">힌트가 여기에 표시됩니다.</div>
-          </div>
-
-          <div id="hardNoteArea" style="margin-top:12px; display:none">
-            <div class="banner">
-              Hard 모드에서는 “불가능” 버튼을 누르면 바로 판정합니다.<br/>
-              틀리면 1스테이지로 돌아갑니다.
-            </div>
-          </div>
-
-          <div class="divider"></div>
-          <div class="tiny">
-            • 이동은 <strong>채우기 / 비우기 / 옮기기</strong> 모두 1회로 계산됩니다.<br/>
-            • 통 크기는 용량에 따라 조금씩 다릅니다.
-          </div>
+          <button id="nextStageBtn" class="primary-btn">다음 스테이지</button>
         </div>
       </div>
     </div>
-
   </div>
-</div>
 
-<!-- Modal -->
-<div class="modalOverlay" id="modalOverlay">
-  <div class="modal">
-    <div class="modalHeader">
-      <h3 id="modalTitle">결과</h3>
-      <button class="ghost" id="btnCloseModal">닫기</button>
-    </div>
-    <div class="modalBody" id="modalBody"></div>
-    <div class="footerRow" id="modalFooter"></div>
-  </div>
-</div>
-
-<script>
-(() => {
-  const $ = (sel) => document.querySelector(sel);
-  const pad2 = (n) => String(n).padStart(2,'0');
-  const msToMMSS = (ms) => {
-    const s = Math.max(0, Math.floor(ms/1000));
-    const mm = Math.floor(s/60);
-    const ss = s%60;
-    return `${pad2(mm)}:${pad2(ss)}`;
-  };
-
-  // ---------- BFS (min moves) ----------
-  function bfsMinMoves(capacities, goal){
-    const n = capacities.length;
-    const start = Array(n).fill(0);
-    const key = (st) => st.join(',');
-    const q = [{st:start, d:0}];
-    const seen = new Set([key(start)]);
-    const isGoal = (st) => st.some(v => v === goal);
-    if (isGoal(start)) return 0;
-
-    while(q.length){
-      const {st, d} = q.shift();
-      for(let i=0;i<n;i++){
-        // fill
-        if(st[i] !== capacities[i]){
-          const ns = st.slice(); ns[i] = capacities[i];
-          const k = key(ns);
-          if(!seen.has(k)){
-            if(isGoal(ns)) return d+1;
-            seen.add(k); q.push({st:ns,d:d+1});
-          }
-        }
-        // empty
-        if(st[i] !== 0){
-          const ns = st.slice(); ns[i] = 0;
-          const k = key(ns);
-          if(!seen.has(k)){
-            if(isGoal(ns)) return d+1;
-            seen.add(k); q.push({st:ns,d:d+1});
-          }
-        }
-        // pour
-        if(st[i] !== 0){
-          for(let j=0;j<n;j++){
-            if(i===j) continue;
-            if(st[j] === capacities[j]) continue;
-            const amount = Math.min(st[i], capacities[j]-st[j]);
-            if(amount<=0) continue;
-            const ns = st.slice();
-            ns[i] -= amount;
-            ns[j] += amount;
-            const k = key(ns);
-            if(!seen.has(k)){
-              if(isGoal(ns)) return d+1;
-              seen.add(k); q.push({st:ns,d:d+1});
-            }
-          }
-        }
+  <script>
+    const stages = [
+      {
+        id: 1,
+        title: '6L 만들기',
+        capacities: [3, 9],
+        target: 6,
+        description: '3L 물통과 9L 물통으로 정확히 6L를 만드세요.',
+        solution: [
+          { type: 'fill', jug: 1 },
+          { type: 'pour', from: 1, to: 0 }
+        ]
+      },
+      {
+        id: 2,
+        title: '2L 만들기',
+        capacities: [5, 8],
+        target: 2,
+        description: '5L 물통과 8L 물통으로 정확히 2L를 만드세요.',
+        solution: [
+          { type: 'fill', jug: 0 },
+          { type: 'pour', from: 0, to: 1 },
+          { type: 'fill', jug: 0 },
+          { type: 'pour', from: 0, to: 1 }
+        ]
+      },
+      {
+        id: 4,
+        title: '4L 만들기',
+        capacities: [3, 5],
+        target: 4,
+        description: '3L 물통과 5L 물통으로 정확히 4L를 만드세요.',
+        solution: [
+          { type: 'fill', jug: 1 },
+          { type: 'pour', from: 1, to: 0 },
+          { type: 'empty', jug: 0 },
+          { type: 'pour', from: 1, to: 0 },
+          { type: 'fill', jug: 1 },
+          { type: 'pour', from: 1, to: 0 }
+        ]
+      },
+      {
+        id: 3,
+        title: '5L 만들기',
+        capacities: [11, 7, 3],
+        target: 5,
+        description: '11L, 7L, 3L 물통으로 정확히 5L를 만드세요.',
+        solution: [
+          { type: 'fill', jug: 0 },
+          { type: 'pour', from: 0, to: 2 },
+          { type: 'empty', jug: 2 },
+          { type: 'pour', from: 0, to: 2 }
+        ]
+      },
+      {
+        id: 5,
+        title: '7L 만들기',
+        capacities: [5, 8, 10],
+        target: 7,
+        description: '5L, 8L, 10L 물통으로 정확히 7L를 만드세요.',
+        solution: [
+          { type: 'fill', jug: 0 },
+          { type: 'fill', jug: 2 },
+          { type: 'pour', from: 0, to: 1 },
+          { type: 'pour', from: 2, to: 1 }
+        ]
       }
-    }
-    return null;
-  }
+    ];
 
-  // ---------- BFS path (for DEV auto-clear) ----------
-  function bfsPath(capacities, goal){
-    const n = capacities.length;
-    const start = Array(n).fill(0);
-    const key = (st) => st.join(',');
-    const isGoal = (st) => st.some(v => v === goal);
+    const state = {
+      stageIndex: 0,
+      amounts: [],
+      displayAmounts: [],
+      selectedJug: null,
+      moveCount: 0,
+      stageStart: 0,
+      timerId: null,
+      isAnimating: false,
+      clearLocked: false,
+      results: new Array(stages.length).fill(null),
+      gameStarted: false,
+      demoPlaying: false,
+      modifierHeld: false,
+      demoAbortToken: 0
+    };
 
-    const q = [start];
-    const parent = new Map(); // key -> {prev, st}
-    parent.set(key(start), {prev:null, st:start});
+    const startScreen = document.getElementById('startScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const summaryScreen = document.getElementById('summaryScreen');
+    const clearOverlay = document.getElementById('clearOverlay');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const nextStageBtn = document.getElementById('nextStageBtn');
+    const fillBtn = document.getElementById('fillBtn');
+    const emptyBtn = document.getElementById('emptyBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const jugsWrap = document.getElementById('jugsWrap');
+    const stageBadge = document.getElementById('stageBadge');
+    const stageTitle = document.getElementById('stageTitle');
+    const capacitiesHint = document.getElementById('capacitiesHint');
+    const goalValue = document.getElementById('goalValue');
+    const goalDesc = document.getElementById('goalDesc');
+    const moveCountEl = document.getElementById('moveCount');
+    const timeCountEl = document.getElementById('timeCount');
+    const selectedDisplay = document.getElementById('selectedDisplay');
+    const messageEl = document.getElementById('message');
+    const clearMoves = document.getElementById('clearMoves');
+    const clearTime = document.getElementById('clearTime');
+    const clearText = document.getElementById('clearText');
+    const summaryList = document.getElementById('summaryList');
+    const totalMoves = document.getElementById('totalMoves');
+    const totalTime = document.getElementById('totalTime');
 
-    while(q.length){
-      const st = q.shift();
-      if(isGoal(st)){
-        const path = [];
-        let k = key(st);
-        while(k){
-          const node = parent.get(k);
-          path.push(node.st);
-          k = node.prev;
-        }
-        path.reverse();
-        return path;
-      }
-
-      for(let i=0;i<n;i++){
-        if(st[i] !== capacities[i]){
-          const ns = st.slice(); ns[i] = capacities[i];
-          const nk = key(ns);
-          if(!parent.has(nk)){ parent.set(nk,{prev:key(st), st:ns}); q.push(ns); }
-        }
-        if(st[i] !== 0){
-          const ns = st.slice(); ns[i] = 0;
-          const nk = key(ns);
-          if(!parent.has(nk)){ parent.set(nk,{prev:key(st), st:ns}); q.push(ns); }
-        }
-        if(st[i] !== 0){
-          for(let j=0;j<n;j++){
-            if(i===j) continue;
-            if(st[j] === capacities[j]) continue;
-            const amount = Math.min(st[i], capacities[j]-st[j]);
-            if(amount<=0) continue;
-            const ns = st.slice();
-            ns[i]-=amount; ns[j]+=amount;
-            const nk = key(ns);
-            if(!parent.has(nk)){ parent.set(nk,{prev:key(st), st:ns}); q.push(ns); }
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  // ---------- Stages (raw) ----------
-  const normalStagesRaw = [
-    {caps:[3,5], goal:4},
-    {caps:[2,7], goal:5},
-    {caps:[4,7], goal:3},
-    {caps:[5,8], goal:6},
-    {caps:[6,10], goal:2},
-    {caps:[3,8], goal:7},
-    {caps:[4,9], goal:1},
-    {caps:[5,9], goal:7},
-    {caps:[6,11], goal:5},
-    {caps:[7,11], goal:6},
-    {caps:[3,5,8], goal:4},
-    {caps:[3,7,10], goal:6},
-    {caps:[4,7,9], goal:5},
-    {caps:[5,8,13], goal:6},
-    {caps:[3,6,11], goal:8},
-    {caps:[3,7,11], goal:5},
-    {caps:[4,9,13], goal:10},
-    {caps:[5,7,12], goal:6},
-    {caps:[3,8,14], goal:11},
-    {caps:[3,7,15], goal:9},
-  ];
-
-  const hardStagesRaw = [
-    {caps:[3,5], goal:4},
-    {caps:[2,9], goal:7},
-    {caps:[5,8], goal:6},
-    {caps:[4,7], goal:5},
-    {caps:[3,7,11], goal:5},
-    {caps:[6,11], goal:1},
-    {caps:[6,10], goal:5},  // 일부는 가능한데 "불가능" 판단을 유도할 수 있는 것들
-    {caps:[4,8], goal:6},
-    {caps:[3,9], goal:4},
-    {caps:[5,15], goal:4},
-  ];
-
-  // ---------- 난이도 정렬 ----------
-  function difficultyScore(stage){
-    const min = bfsMinMoves(stage.caps, stage.goal);
-    const n = stage.caps.length;
-    // minMoves가 가장 큰 영향, 3통이면 약간 가산, 목표가 "너무 가까운 값"이면 약간 감점
-    const capsSorted = stage.caps.slice().sort((a,b)=>a-b);
-    const maxC = capsSorted[capsSorted.length-1];
-    const trivial = (stage.goal === 1 || stage.goal === maxC-1) ? -0.4 : 0;
-    const nBonus = (n===3) ? 0.6 : 0;
-    const minMoves = (min==null) ? 999 : min;
-
-    return (minMoves * 1.0) + nBonus + trivial;
-  }
-
-  function buildSortedStages(raw, mode){
-    const arr = raw.map(s => {
-      const min = bfsMinMoves(s.caps, s.goal);
-      return {...s, _min:min, _diff:difficultyScore(s)};
+    startBtn.addEventListener('click', () => {
+      state.results = new Array(stages.length).fill(null);
+      state.gameStarted = true;
+      showScreen('game');
+      loadStage(0, { resetResultsAfter: true });
     });
 
-    // Normal은 쉬운→어려운 순, Hard도 쉬운→어려운 순(불가능 포함 여부는 지금 raw에 이미 섞여 있음)
-    arr.sort((a,b) => a._diff - b._diff);
+    restartBtn.addEventListener('click', () => {
+      state.results = new Array(stages.length).fill(null);
+      state.gameStarted = true;
+      showScreen('game');
+      loadStage(0, { resetResultsAfter: true });
+    });
 
-    // 정렬 후 _min이 null(불가능)이 있다면 Hard에서는 뒤쪽으로 보내기
-    if(mode === "hard"){
-      const solv = arr.filter(x => x._min !== null);
-      const imp  = arr.filter(x => x._min === null);
-      return solv.concat(imp);
+    nextStageBtn.addEventListener('click', () => {
+      clearOverlay.classList.remove('active');
+      if (state.stageIndex >= stages.length - 1) {
+        showSummary();
+      } else {
+        loadStage(state.stageIndex + 1);
+      }
+    });
+
+    fillBtn.addEventListener('click', () => {
+      if (!canAct() || state.selectedJug === null) return;
+      doFill(state.selectedJug);
+    });
+
+    emptyBtn.addEventListener('click', () => {
+      if (!canAct() || state.selectedJug === null) return;
+      doEmpty(state.selectedJug);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (state.isAnimating) {
+        state.demoAbortToken += 1;
+      }
+      resetStageState();
+      setMessage('현재 스테이지를 처음 상태로 되돌렸습니다.');
+    });
+
+    document.addEventListener('keydown', handleAdminKeyDown);
+    document.addEventListener('keyup', handleAdminKeyUp);
+    window.addEventListener('blur', () => { state.modifierHeld = false; });
+
+    function handleAdminKeyDown(e) {
+      if (e.code === 'Backquote') {
+        state.modifierHeld = true;
+        e.preventDefault();
+        return;
+      }
+      if (!state.modifierHeld || !state.gameStarted) return;
+
+      if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        forceStageMove(1);
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        forceStageMove(-1);
+      } else if (e.code === 'Enter') {
+        e.preventDefault();
+        triggerDemoSolve();
+      }
     }
-    return arr;
-  }
 
-  // ---------- Tiers (재설정: 7/7/6) ----------
-  const tiers = [
-    {name:"초급", from:1, to:7},
-    {name:"중급", from:8, to:14},
-    {name:"고급", from:15, to:20},
-  ];
-
-  const hintLevels = [
-    "한 번에 해결하려고 하지 말고, 먼저 ‘중간 상태’를 만들어 보세요.",
-    "작은 통을 ‘측정 도구’처럼 써 보세요. 가득 채우고 옮기면 남는 양이 생깁니다.",
-    "같은 상태가 반복되면, 다른 선택을 해 보세요."
-  ];
-
-  // ---------- State ----------
-  const state = {
-    mode: null,
-    stages: [],
-    idx: 0,
-    caps: [],
-    goal: 0,
-    amounts: [],
-    selected: null,
-    moves: 0,
-    startMs: 0,
-    timerId: null,
-    loopSet: new Set(),
-    loopDetected: false,
-    minMoves: null,
-    hintUsed: 0,
-    records: [],
-    jugUI: [],
-    isAutoSolving: false
-  };
-
-  // ---------- DOM ----------
-  const startScreen = $("#startScreen");
-  const gameScreen = $("#gameScreen");
-
-  const modeTitle = $("#modeTitle");
-  const tierBadge = $("#tierBadge");
-  const progressBadge = $("#progressBadge");
-  const stageDesc = $("#stageDesc");
-  const stageNo = $("#stageNo");
-  const goalText = $("#goalText");
-  const movesText = $("#movesText");
-  const timeText = $("#timeText");
-
-  const jugsEl = $("#jugs");
-  const selectInfo = $("#selectInfo");
-  const loopBanner = $("#loopBanner");
-  const btnDeclareImpossible = $("#btnDeclareImpossible");
-  const modeStateText = $("#modeStateText");
-
-  const normalHintArea = $("#normalHintArea");
-  const hardNoteArea = $("#hardNoteArea");
-  const hintBox = $("#hintBox");
-  const btnHint = $("#btnHint");
-  const jugPanel = $("#jugPanel");
-
-  const modalOverlay = $("#modalOverlay");
-  const modalTitle = $("#modalTitle");
-  const modalBody = $("#modalBody");
-  const modalFooter = $("#modalFooter");
-
-  function el(tag, cls){
-    const n = document.createElement(tag);
-    if(cls) n.className = cls;
-    return n;
-  }
-  function showModal(title, bodyNode, footerButtons){
-    modalTitle.textContent = title;
-    modalBody.innerHTML = "";
-    modalBody.appendChild(bodyNode);
-    modalFooter.innerHTML = "";
-    footerButtons.forEach(b => modalFooter.appendChild(b));
-    modalOverlay.style.display = "flex";
-  }
-  function closeModal(){ modalOverlay.style.display = "none"; }
-  $("#btnCloseModal").addEventListener("click", closeModal);
-  modalOverlay.addEventListener("click", (e) => { if(e.target === modalOverlay) closeModal(); });
-
-  function setScreen(which){
-    if(which === "start"){
-      startScreen.style.display = "";
-      gameScreen.style.display = "none";
-      stopTimer();
-    }else{
-      startScreen.style.display = "none";
-      gameScreen.style.display = "";
+    function handleAdminKeyUp(e) {
+      if (e.code === 'Backquote') {
+        state.modifierHeld = false;
+      }
     }
-  }
 
-  // ---------- Timer ----------
-  function stopTimer(){
-    if(state.timerId){
+    function forceStageMove(delta) {
+      if (state.isAnimating) return;
+      clearOverlay.classList.remove('active');
+      const next = Math.max(0, Math.min(stages.length - 1, state.stageIndex + delta));
+      if (next === state.stageIndex) return;
+      loadStage(next);
+      setMessage(delta > 0 ? '관리자 기능으로 다음 스테이지로 이동했습니다.' : '관리자 기능으로 이전 스테이지로 이동했습니다.');
+    }
+
+    async function triggerDemoSolve() {
+      if (state.isAnimating || state.demoPlaying || clearOverlay.classList.contains('active')) return;
+      if (!isAtResetState()) {
+        setMessage('자동 시연은 리셋 상태에서만 작동합니다. 먼저 리셋해 주세요.');
+        return;
+      }
+      state.demoPlaying = true;
+      state.demoAbortToken += 1;
+      const myToken = state.demoAbortToken;
+      state.selectedJug = null;
+      updateControls();
+      setMessage('관리자 자동 시연을 시작합니다.');
+
+      const solution = currentStage().solution;
+      for (const step of solution) {
+        if (myToken !== state.demoAbortToken) return;
+        await pause(220);
+        if (myToken !== state.demoAbortToken) return;
+        if (step.type === 'fill') {
+          await doFill(step.jug, { countMove: false, fromDemo: true });
+        } else if (step.type === 'empty') {
+          await doEmpty(step.jug, { countMove: false, fromDemo: true });
+        } else if (step.type === 'pour') {
+          await doPour(step.from, step.to, { countMove: false, fromDemo: true });
+        }
+        if (myToken !== state.demoAbortToken) return;
+      }
+      state.demoPlaying = false;
+    }
+
+    function isAtResetState() {
+      return state.amounts.every(v => v === 0) && state.moveCount === 0;
+    }
+
+    function showScreen(name) {
+      startScreen.classList.toggle('active', name === 'start');
+      gameScreen.classList.toggle('active', name === 'game');
+      summaryScreen.classList.toggle('active', name === 'summary');
+    }
+
+    function currentStage() {
+      return stages[state.stageIndex];
+    }
+
+    function loadStage(index, options = {}) {
+      const { resetResultsAfter = false } = options;
+      state.stageIndex = index;
+      clearOverlay.classList.remove('active');
+      if (resetResultsAfter) {
+        state.results = new Array(stages.length).fill(null);
+      }
+      resetStageState();
+      renderStageInfo();
+      setMessage('스테이지를 시작했습니다. 목표량을 만들어 보세요.');
+    }
+
+    function resetStageState() {
+      state.demoAbortToken += 1;
+      state.demoPlaying = false;
+      state.clearLocked = false;
+      state.isAnimating = false;
+      state.selectedJug = null;
+      state.moveCount = 0;
+      const caps = currentStage().capacities;
+      state.amounts = caps.map(() => 0);
+      state.displayAmounts = caps.map(() => 0);
+      state.stageStart = performance.now();
+      startTimer();
+      render();
+    }
+
+    function renderStageInfo() {
+      const stage = currentStage();
+      stageBadge.textContent = `Stage ${state.stageIndex + 1} / ${stages.length}`;
+      stageTitle.textContent = stage.title;
+      capacitiesHint.textContent = `물통: ${stage.capacities.map(v => `${v}L`).join(' / ')}`;
+      goalValue.textContent = `${stage.target}L`;
+      goalDesc.textContent = stage.description;
+    }
+
+    function startTimer() {
+      clearInterval(state.timerId);
+      timeCountEl.textContent = '00:00.0';
+      state.timerId = setInterval(() => {
+        if (state.clearLocked) return;
+        timeCountEl.textContent = formatTime(performance.now() - state.stageStart);
+      }, 100);
+    }
+
+    function stopTimer() {
       clearInterval(state.timerId);
       state.timerId = null;
     }
-  }
-  function startTimer(){
-    stopTimer();
-    state.timerId = setInterval(() => {
-      const ms = Date.now() - state.startMs;
-      timeText.textContent = msToMMSS(ms);
-    }, 250);
-    timeText.textContent = "00:00";
-  }
 
-  // ---------- SVG jug ----------
-  function createJugElement(jugIndex, cap){
-    const W = 120, H = 210;
-    const innerX = 22, innerY = 22, innerW = 76, innerH = 160;
-
-    const tickSideX = innerX + innerW + 6;
-    const tick0Y = innerY + innerH;
-    const tickMidY = innerY + innerH/2;
-    const tickMaxY = innerY;
-
-    const jugCard = el("div","jug");
-    jugCard.setAttribute("role","button");
-    jugCard.setAttribute("tabindex","0");
-
-    const head = el("div","cap");
-    head.innerHTML = `<span>${jugIndex+1}번 통</span><strong>${cap}L</strong>`;
-
-    const svgWrap = el("div","jugSvgWrap");
-
-    const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.setAttribute("width","100%");
-    svg.setAttribute("height","100%");
-    // 바닥 정렬(떠 보임 완화)
-    svg.setAttribute("preserveAspectRatio", "xMidYMax meet");
-
-    const defs = document.createElementNS("http://www.w3.org/2000/svg","defs");
-    const id = `s${state.idx}_j${jugIndex}_${Math.random().toString(16).slice(2)}`;
-
-    const cupGrad = document.createElementNS("http://www.w3.org/2000/svg","linearGradient");
-    cupGrad.setAttribute("id", `cupGrad-${id}`);
-    cupGrad.setAttribute("x1","0"); cupGrad.setAttribute("y1","0");
-    cupGrad.setAttribute("x2","1"); cupGrad.setAttribute("y2","0");
-    cupGrad.innerHTML = `
-      <stop offset="0" stop-color="rgba(255,255,255,.08)"/>
-      <stop offset="0.35" stop-color="rgba(255,255,255,.03)"/>
-      <stop offset="0.7" stop-color="rgba(255,255,255,.07)"/>
-      <stop offset="1" stop-color="rgba(255,255,255,.04)"/>
-    `;
-
-    const waterGrad = document.createElementNS("http://www.w3.org/2000/svg","linearGradient");
-    waterGrad.setAttribute("id", `waterGrad-${id}`);
-    waterGrad.setAttribute("x1","0"); waterGrad.setAttribute("y1","0");
-    waterGrad.setAttribute("x2","0"); waterGrad.setAttribute("y2","1");
-    waterGrad.innerHTML = `
-      <stop offset="0" stop-color="var(--waterTop)"/>
-      <stop offset="1" stop-color="var(--waterBottom)"/>
-    `;
-
-    const clip = document.createElementNS("http://www.w3.org/2000/svg","clipPath");
-    clip.setAttribute("id", `cupClip-${id}`);
-    const innerRect = document.createElementNS("http://www.w3.org/2000/svg","rect");
-    innerRect.setAttribute("x", innerX);
-    innerRect.setAttribute("y", innerY);
-    innerRect.setAttribute("width", innerW);
-    innerRect.setAttribute("height", innerH);
-    innerRect.setAttribute("rx","10");
-    clip.appendChild(innerRect);
-
-    defs.appendChild(cupGrad);
-    defs.appendChild(waterGrad);
-    defs.appendChild(clip);
-    svg.appendChild(defs);
-
-    const baseShadow = document.createElementNS("http://www.w3.org/2000/svg","ellipse");
-    baseShadow.setAttribute("cx", W/2);
-    baseShadow.setAttribute("cy", H-10);
-    baseShadow.setAttribute("rx","36");
-    baseShadow.setAttribute("ry","8");
-    baseShadow.setAttribute("fill","rgba(0,0,0,.25)");
-    svg.appendChild(baseShadow);
-
-    const cupG = document.createElementNS("http://www.w3.org/2000/svg","g");
-
-    const outer = document.createElementNS("http://www.w3.org/2000/svg","path");
-    outer.setAttribute("d",
-      "M 18 20 Q 18 10 28 10 L 92 10 Q 102 10 102 20 L 106 184 Q 106 198 92 198 L 28 198 Q 14 198 14 184 Z"
-    );
-    outer.setAttribute("fill", `url(#cupGrad-${id})`);
-    outer.setAttribute("stroke", "var(--cup-stroke)");
-    outer.setAttribute("stroke-width","1.2");
-    cupG.appendChild(outer);
-
-    const rim = document.createElementNS("http://www.w3.org/2000/svg","path");
-    rim.setAttribute("d",
-      "M 26 10 L 94 10 Q 102 10 102 18 L 102 22 Q 102 14 94 14 L 26 14 Q 18 14 18 22 L 18 18 Q 18 10 26 10 Z"
-    );
-    rim.setAttribute("fill","rgba(255,255,255,.10)");
-    rim.setAttribute("stroke","rgba(255,255,255,.18)");
-    rim.setAttribute("stroke-width",".6");
-    cupG.appendChild(rim);
-
-    const base = document.createElementNS("http://www.w3.org/2000/svg","rect");
-    base.setAttribute("x","18"); base.setAttribute("y","186");
-    base.setAttribute("width","88"); base.setAttribute("height","14");
-    base.setAttribute("rx","10");
-    base.setAttribute("fill","rgba(255,255,255,.07)");
-    base.setAttribute("stroke","rgba(255,255,255,.12)");
-    base.setAttribute("stroke-width",".6");
-    cupG.appendChild(base);
-
-    const wall = document.createElementNS("http://www.w3.org/2000/svg","rect");
-    wall.setAttribute("x", innerX);
-    wall.setAttribute("y", innerY);
-    wall.setAttribute("width", innerW);
-    wall.setAttribute("height", innerH);
-    wall.setAttribute("rx","10");
-    wall.setAttribute("fill","rgba(0,0,0,.18)");
-    wall.setAttribute("stroke","rgba(255,255,255,.10)");
-    wall.setAttribute("stroke-width",".6");
-    cupG.appendChild(wall);
-
-    const hi = document.createElementNS("http://www.w3.org/2000/svg","rect");
-    hi.setAttribute("x","28"); hi.setAttribute("y","22");
-    hi.setAttribute("width","10"); hi.setAttribute("height","164");
-    hi.setAttribute("rx","6");
-    hi.setAttribute("fill","rgba(255,255,255,.07)");
-    cupG.appendChild(hi);
-
-    svg.appendChild(cupG);
-
-    const waterClipG = document.createElementNS("http://www.w3.org/2000/svg","g");
-    waterClipG.setAttribute("clip-path", `url(#cupClip-${id})`);
-
-    const waterGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
-    waterGroup.classList.add("waterGroup");
-
-    const waterRect = document.createElementNS("http://www.w3.org/2000/svg","rect");
-    waterRect.setAttribute("x", innerX);
-    waterRect.setAttribute("y", innerY);
-    waterRect.setAttribute("width", innerW);
-    waterRect.setAttribute("height", innerH);
-    waterRect.setAttribute("fill", `url(#waterGrad-${id})`);
-    waterGroup.appendChild(waterRect);
-
-    const waveGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
-    waveGroup.classList.add("waveWiggle");
-
-    const wavePath = document.createElementNS("http://www.w3.org/2000/svg","path");
-    wavePath.setAttribute("fill","none");
-    wavePath.setAttribute("stroke","var(--waterEdge)");
-    wavePath.setAttribute("stroke-width","1");
-    wavePath.setAttribute("opacity",".65");
-    waveGroup.appendChild(wavePath);
-
-    waterClipG.appendChild(waterGroup);
-    waterClipG.appendChild(waveGroup);
-    svg.appendChild(waterClipG);
-
-    const tickG = document.createElementNS("http://www.w3.org/2000/svg","g");
-    tickG.setAttribute("opacity",".95");
-
-    function tickLine(y, len){
-      const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
-      ln.setAttribute("x1", tickSideX);
-      ln.setAttribute("y1", y);
-      ln.setAttribute("x2", tickSideX + len);
-      ln.setAttribute("y2", y);
-      ln.setAttribute("stroke","var(--tick)");
-      ln.setAttribute("stroke-width","1");
-      return ln;
-    }
-    tickG.appendChild(tickLine(tickMaxY, 10));
-    tickG.appendChild(tickLine(tickMidY, 8));
-    tickG.appendChild(tickLine(tick0Y, 10));
-
-    function tickText(y, text){
-      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
-      t.setAttribute("x", tickSideX + 12);
-      t.setAttribute("y", y + 4);
-      t.setAttribute("font-size","10");
-      t.setAttribute("fill","var(--tickText)");
-      t.textContent = text;
-      return t;
-    }
-    tickG.appendChild(tickText(tickMaxY, String(cap)));
-    tickG.appendChild(tickText(tickMidY, String(Math.round(cap/2))));
-    tickG.appendChild(tickText(tick0Y, "0"));
-    svg.appendChild(tickG);
-
-    svgWrap.appendChild(svg);
-
-    const amt = el("div","amt");
-    const amtLeft = el("span"); amtLeft.textContent = "현재";
-    const amtStrong = el("strong"); amtStrong.textContent = "0L";
-    amt.appendChild(amtLeft);
-    amt.appendChild(amtStrong);
-
-    jugCard.appendChild(head);
-    jugCard.appendChild(svgWrap);
-    jugCard.appendChild(amt);
-
-    jugCard.addEventListener("click", () => {
-      if(state.isAutoSolving) return;
-      onJugClick(jugIndex);
-    });
-    jugCard.addEventListener("keydown", (e) => {
-      if(state.isAutoSolving) return;
-      if(e.key === "Enter" || e.key === " ") { e.preventDefault(); onJugClick(jugIndex); }
-    });
-
-    return {
-      jugCard,
-      svgWrap,
-      amtStrong,
-      waterGroup,
-      wavePath,
-      waveGroup,
-      geom: { innerX, innerY, innerW, innerH },
-    };
-  }
-
-  function setWavePath(refs, waterTopY){
-    const { innerX, innerW } = refs.geom;
-    const amp = 2.2;
-    const x0 = innerX, x1 = innerX + innerW;
-    const c1 = innerX + innerW*0.25;
-    const c2 = innerX + innerW*0.45;
-    const c3 = innerX + innerW*0.60;
-    const c4 = innerX + innerW*0.75;
-    const c5 = innerX + innerW*0.88;
-
-    const d = `M ${x0} ${waterTopY}
-      C ${c1} ${waterTopY-amp}, ${c2} ${waterTopY+amp}, ${c3} ${waterTopY}
-      C ${c4} ${waterTopY-amp}, ${c5} ${waterTopY+amp}, ${x1} ${waterTopY}`;
-    refs.wavePath.setAttribute("d", d);
-    refs.waveGroup.setAttribute("transform", `translate(0,0)`);
-  }
-
-  function updateWaterVisual(jugIndex){
-    const cap = state.caps[jugIndex];
-    const amt = state.amounts[jugIndex];
-    const refs = state.jugUI[jugIndex];
-
-    refs.amtStrong.textContent = `${amt}L`;
-
-    const { innerY, innerH } = refs.geom;
-    const waterH = (amt / cap) * innerH;
-    const offset = innerH - waterH;
-    refs.waterGroup.style.transform = `translate(0px, ${offset}px)`;
-
-    const waterTopY = innerY + offset;
-    setWavePath(refs, waterTopY);
-  }
-
-  // ---------- 더 자연스러운 통 크기(높이+폭 약간) ----------
-  function applyJugSizing(){
-    const caps = state.caps.slice();
-    const minC = Math.min(...caps);
-    const maxC = Math.max(...caps);
-
-    const baseH = 230;
-    const minScale = 0.92;   // 극단 줄임
-    const maxScale = 1.18;
-
-    for(let i=0;i<caps.length;i++){
-      let t = 0;
-      if(maxC !== minC) t = (caps[i] - minC) / (maxC - minC);
-
-      // 곡선 스케일로 완만하게(자연스러움)
-      const smooth = Math.sqrt(t);
-      const scale = minScale + (maxScale - minScale) * smooth;
-
-      const h = Math.round(baseH * scale);
-      state.jugUI[i].svgWrap.style.height = `${h}px`;
-
-      // 폭도 아주 살짝만 반영(너무 튀지 않게)
-      const baseW = 150;
-      const w = Math.round(baseW * (0.98 + 0.08 * smooth)); // 최대 +8% 정도
-      state.jugUI[i].jugCard.style.width = `${w}px`;
-    }
-  }
-
-  function buildJugUI(){
-    state.jugUI = [];
-    jugsEl.innerHTML = "";
-    state.caps.forEach((cap, i) => {
-      const refs = createJugElement(i, cap);
-      state.jugUI.push(refs);
-      jugsEl.appendChild(refs.jugCard);
-    });
-
-    applyJugSizing();
-
-    for(let i=0;i<state.caps.length;i++){
-      updateWaterVisual(i);
-      state.jugUI[i].jugCard.classList.toggle("selected", state.selected === i);
-    }
-  }
-
-  function updateSelectionUI(){
-    for(let i=0;i<state.jugUI.length;i++){
-      state.jugUI[i].jugCard.classList.toggle("selected", state.selected === i);
-    }
-    selectInfo.textContent = state.selected == null
-      ? "선택: 없음"
-      : `선택: ${state.selected+1}번 통 (${state.caps[state.selected]}L)`;
-    modeStateText.textContent = (state.selected == null) ? "현재: 선택 없음" : "현재: 선택됨";
-  }
-
-  function cancelSelection(){
-    if(state.selected == null) return;
-    state.selected = null;
-    updateSelectionUI();
-  }
-
-  // ---------- 게임 로직 ----------
-  function addMoveAndCheckLoop(){
-    state.moves += 1;
-    movesText.textContent = String(state.moves);
-
-    const key = state.amounts.join(',');
-    if(state.loopSet.has(key)){
-      state.loopDetected = true;
-    }else{
-      state.loopSet.add(key);
+    function render() {
+      renderJugs();
+      moveCountEl.textContent = String(state.moveCount);
+      updateControls();
     }
 
-    if(state.mode === "hard"){
-      loopBanner.style.display = state.loopDetected ? "" : "none";
-      // 하드에서는 불가능 버튼을 항상 보이되, 반복 감지되면 더 눌러볼 만하다는 신호로만 사용
-    }
-  }
+    function renderJugs() {
+      const stage = currentStage();
+      const maxCap = Math.max(...stage.capacities);
+      jugsWrap.innerHTML = '';
 
-  function canPourAmount(from, to){
-    const capTo = state.caps[to];
-    if(state.amounts[from] <= 0) return 0;
-    if(state.amounts[to] >= capTo) return 0;
-    return Math.min(state.amounts[from], capTo - state.amounts[to]);
-  }
+      stage.capacities.forEach((cap, index) => {
+        const jugHeight = Math.max(96, (cap / maxCap) * 300);
+        const displayValue = state.displayAmounts[index];
+        const waterPercent = Math.max(0, Math.min(100, (displayValue / cap) * 100));
 
-  // ✅ 옮기기 모드 제거: 선택된 통이 있을 때 다른 통을 누르면 “옮기기 시도”
-  function onJugClick(i){
-    if(state.selected == null){
-      state.selected = i;
-      updateSelectionUI();
-      return;
-    }
-    if(state.selected === i){
-      // 같은 통 다시 누르면 선택 취소(편의)
-      cancelSelection();
-      return;
-    }
+        const card = document.createElement('div');
+        card.className = 'jug-card';
 
-    const from = state.selected;
-    const to = i;
-    const amount = canPourAmount(from, to);
+        const topLabel = document.createElement('div');
+        topLabel.className = 'jug-top-label';
+        topLabel.textContent = `물통 ${index + 1}`;
 
-    if(amount > 0){
-      state.amounts[from] -= amount;
-      state.amounts[to] += amount;
-      addMoveAndCheckLoop();
+        const jug = document.createElement('div');
+        jug.className = 'jug';
+        if (state.selectedJug === index) jug.classList.add('selected');
+        if (state.isAnimating || state.demoPlaying) jug.classList.add('disabled');
+        jug.style.height = `${jugHeight}px`;
+        jug.setAttribute('role', 'button');
+        jug.setAttribute('aria-label', `${index + 1}번 물통, 현재 ${displayValue.toFixed(1)}리터`);
+        jug.addEventListener('click', () => handleJugClick(index));
 
-      // 옮긴 뒤 선택 자동 취소(실수 방지)
-      state.selected = null;
-      updateSelectionUI();
+        const mouth = document.createElement('div');
+        mouth.className = 'jug-mouth';
 
-      updateWaterVisual(from);
-      updateWaterVisual(to);
-      checkWin();
-    }else{
-      // 옮길 수 없으면 그냥 선택을 바꾼다(사용자 의도 보존)
-      state.selected = i;
-      updateSelectionUI();
-    }
-  }
+        const water = document.createElement('div');
+        water.className = 'water';
+        water.style.height = `${waterPercent}%`;
 
-  function fillSelected(){
-    if(state.selected == null) return;
-    const i = state.selected;
-    if(state.amounts[i] === state.caps[i]) return;
+        jug.appendChild(mouth);
+        jug.appendChild(water);
 
-    state.amounts[i] = state.caps[i];
-    addMoveAndCheckLoop();
-    updateWaterVisual(i);
-    checkWin();
-  }
+        const info = document.createElement('div');
+        info.className = 'jug-info';
+        info.innerHTML = `
+          <div class="amount">${formatLiters(displayValue)}L</div>
+          <div class="caption">용량 ${cap}L</div>
+        `;
 
-  function emptySelected(){
-    if(state.selected == null) return;
-    const i = state.selected;
-    if(state.amounts[i] === 0) return;
-
-    state.amounts[i] = 0;
-    addMoveAndCheckLoop();
-    updateWaterVisual(i);
-    checkWin();
-  }
-
-  function isGoalReached(){
-    return state.amounts.some(v => v === state.goal);
-  }
-
-  // ✅ 점수식 단순화: 최소 이동이면 무조건 100점
-  function computeNormalScore(moves, ms, minMoves){
-    if(minMoves == null) return 0;
-    if(moves <= minMoves) return 100;
-
-    const diff = moves - minMoves;
-    // 이동이 핵심이 되도록 크게 깎기
-    let score = 100 - diff * 8;
-
-    // 시간은 아주 약하게만(너무 오래 걸리면 약간)
-    const softLimit = (minMoves * 22) * 1000;
-    if(ms > softLimit){
-      const over = ms - softLimit;
-      score -= Math.floor(over / (45*1000)) * 2;
-    }
-    return Math.max(0, Math.min(100, score));
-  }
-
-  // ---------- 화면 상단 단계 표시 ----------
-  function getTierNameByStageNumber(stageNumber){
-    const t = tiers.find(x => stageNumber >= x.from && stageNumber <= x.to);
-    return t ? t.name : "";
-  }
-
-  function renderTopUI(){
-    modeTitle.textContent = state.mode === "normal" ? "Normal" : "Hard";
-
-    const stageNumber = state.idx + 1;
-    stageNo.textContent = String(stageNumber);
-    goalText.textContent = `${state.goal}L`;
-    movesText.textContent = String(state.moves);
-
-    tierBadge.textContent = getTierNameByStageNumber(stageNumber) || (state.mode === "hard" ? "Hard" : "");
-    progressBadge.textContent = `${stageNumber} / ${state.stages.length}`;
-
-    selectInfo.textContent = state.selected == null
-      ? "선택: 없음"
-      : `선택: ${state.selected+1}번 통 (${state.caps[state.selected]}L)`;
-  }
-
-  function renderModeSections(){
-    if(state.mode === "normal"){
-      stageDesc.textContent = "목표한 물의 양을 만들어 보세요. 이동을 줄이면 점수가 올라갑니다.";
-      normalHintArea.style.display = "";
-      hardNoteArea.style.display = "none";
-      btnDeclareImpossible.style.display = "none";
-    }else{
-      stageDesc.textContent = "가능/불가능을 판단해야 할 수도 있습니다. 불가능을 눌렀는데 틀리면 1로 돌아갑니다.";
-      normalHintArea.style.display = "none";
-      hardNoteArea.style.display = "";
-      btnDeclareImpossible.style.display = "";
-    }
-  }
-
-  // ---------- Stage state ----------
-  function resetStageState(){
-    state.amounts = Array(state.caps.length).fill(0);
-    state.selected = null;
-    state.moves = 0;
-    state.hintUsed = 0;
-    state.loopSet = new Set();
-    state.loopDetected = false;
-    loopBanner.style.display = "none";
-    state.loopSet.add(state.amounts.join(','));
-
-    hintBox.textContent = "힌트가 여기에 표시됩니다.";
-    btnHint.disabled = false;
-
-    state.startMs = Date.now();
-    startTimer();
-
-    buildJugUI();
-    updateSelectionUI();
-    renderTopUI();
-    renderModeSections();
-  }
-
-  // ---------- Results / Flow ----------
-  function endStage({type}){
-    stopTimer();
-    const elapsed = Date.now() - state.startMs;
-
-    const record = {
-      mode: state.mode,
-      stageIndex: state.idx,
-      caps: state.caps.slice(),
-      goal: state.goal,
-      moves: state.moves,
-      timeMs: elapsed,
-      timeText: msToMMSS(elapsed),
-      resultType: type
-    };
-
-    if(state.mode === "normal"){
-      const min = state.minMoves ?? bfsMinMoves(state.caps, state.goal);
-      record.minMoves = min;
-      record.score = computeNormalScore(state.moves, elapsed, min);
+        card.appendChild(topLabel);
+        card.appendChild(jug);
+        card.appendChild(info);
+        jugsWrap.appendChild(card);
+      });
     }
 
-    state.records.push(record);
+    function handleJugClick(index) {
+      if (!canAct()) return;
 
-    if(state.mode === "normal") showNormalStageClear(record);
-    else showHardStageClear(record);
-  }
-
-  function showNormalStageClear(rec){
-    const body = el("div");
-    const grid = el("div","kpiGrid");
-
-    const bScore = el("div","kpiBox big");
-    bScore.innerHTML = `<div class="label">점수</div><div class="val">${rec.score} / 100</div>`;
-
-    const bMoves = el("div","kpiBox");
-    bMoves.innerHTML = `<div class="label">이동</div><div class="val">${rec.moves}회</div>`;
-
-    const bTime = el("div","kpiBox");
-    bTime.innerHTML = `<div class="label">시간</div><div class="val">${rec.timeText}</div>`;
-
-    grid.append(bScore,bMoves,bTime);
-    body.appendChild(grid);
-
-    const p = el("p");
-    p.textContent = (rec.moves <= rec.minMoves) ? "최소 이동으로 해결했습니다." : "다음에는 이동을 더 줄여보세요.";
-    body.appendChild(p);
-
-    const btnNext = el("button","good");
-    btnNext.textContent = "다음";
-    btnNext.addEventListener("click", () => { closeModal(); goNextNormalOrTier(); });
-
-    showModal("스테이지 클리어", body, [btnNext]);
-  }
-
-  function showHardStageClear(rec){
-    const body = el("div");
-    const grid = el("div","kpiGrid");
-
-    const bRes = el("div","kpiBox big");
-    bRes.innerHTML = `<div class="label">결과</div><div class="val">${rec.resultType === "declare-impossible" ? "불가능 정답" : "목표 달성"}</div>`;
-
-    const bMoves = el("div","kpiBox");
-    bMoves.innerHTML = `<div class="label">이동</div><div class="val">${rec.moves}회</div>`;
-
-    const bTime = el("div","kpiBox");
-    bTime.innerHTML = `<div class="label">시간</div><div class="val">${rec.timeText}</div>`;
-
-    grid.append(bRes,bMoves,bTime);
-    body.appendChild(grid);
-
-    const btnNext = el("button","good");
-    btnNext.textContent = (state.idx === state.stages.length - 1) ? "결과 보기" : "다음";
-    btnNext.addEventListener("click", () => { closeModal(); goNextHardOrEnd(); });
-
-    showModal("완료", body, [btnNext]);
-  }
-
-  function goNextNormalOrTier(){
-    const stageNumber = state.idx + 1;
-    const t = tiers.find(x => x.to === stageNumber);
-    if(t){ showTierSummary(t); return; }
-    if(state.idx < state.stages.length - 1){
-      state.idx += 1;
-      loadStage();
-    }else{
-      showFinalNormalSummary();
-    }
-  }
-
-  // ✅ 팝업이 뜬금없지 않게: 제목/설명 강화 + 항상 "초/중/고"가 상단에 표시됨
-  function showTierSummary(tier){
-    const fromIdx = tier.from - 1;
-    const toIdx = tier.to - 1;
-    const rows = state.records.filter(r => r.mode === "normal" && r.stageIndex >= fromIdx && r.stageIndex <= toIdx);
-    const avg = Math.round(rows.reduce((a,b)=>a+(b.score??0),0) / rows.length);
-
-    const body = el("div");
-    const p = el("p");
-    p.textContent = `${tier.name} 완료 (${tier.from}~${tier.to} 스테이지). 기록을 확인해 보세요.`;
-    body.appendChild(p);
-
-    const table = el("table");
-    table.innerHTML = `
-      <thead>
-        <tr><th>스테이지</th><th>이동</th><th>시간</th><th>점수</th></tr>
-      </thead>
-      <tbody>
-        ${rows.map(r => `
-          <tr>
-            <td>${r.stageIndex+1}</td>
-            <td>${r.moves}회</td>
-            <td>${r.timeText}</td>
-            <td>${r.score} / 100</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    `;
-    body.appendChild(table);
-
-    const grid = el("div","kpiGrid");
-    const b1 = el("div","kpiBox big"); b1.innerHTML = `<div class="label">${tier.name} 평균 점수</div><div class="val">${avg} / 100</div>`;
-    const b2 = el("div","kpiBox"); b2.innerHTML = `<div class="label">${tier.name} 총 이동</div><div class="val">${rows.reduce((a,b)=>a+b.moves,0)}회</div>`;
-    const b3 = el("div","kpiBox"); b3.innerHTML = `<div class="label">${tier.name} 총 시간</div><div class="val">${msToMMSS(rows.reduce((a,b)=>a+b.timeMs,0))}</div>`;
-    grid.append(b1,b2,b3);
-    body.insertBefore(grid, table);
-
-    const btnNext = el("button","good");
-    btnNext.textContent = (tier.to === 20) ? "최종 결과" : "다음 단계";
-    btnNext.addEventListener("click", () => {
-      closeModal();
-      if(tier.to === 20) showFinalNormalSummary();
-      else { state.idx += 1; loadStage(); }
-    });
-
-    showModal(`${tier.name} 기록`, body, [btnNext]);
-  }
-
-  function showFinalNormalSummary(){
-    const rows = state.records.filter(r => r.mode === "normal");
-    const tierScores = tiers.map(t => {
-      const subset = rows.filter(r => (r.stageIndex+1) >= t.from && (r.stageIndex+1) <= t.to);
-      const avg = Math.round(subset.reduce((a,b)=>a+(b.score??0),0)/subset.length);
-      return {name:t.name, avg, subset};
-    });
-    const overall = Math.round(tierScores.reduce((a,b)=>a+b.avg,0)/tierScores.length);
-
-    const body = el("div");
-    const grid = el("div","kpiGrid");
-    const b1 = el("div","kpiBox big"); b1.innerHTML = `<div class="label">최종 점수</div><div class="val">${overall} / 100</div>`;
-    const b2 = el("div","kpiBox"); b2.innerHTML = `<div class="label">총 이동</div><div class="val">${rows.reduce((a,b)=>a+b.moves,0)}회</div>`;
-    const b3 = el("div","kpiBox"); b3.innerHTML = `<div class="label">총 시간</div><div class="val">${msToMMSS(rows.reduce((a,b)=>a+b.timeMs,0))}</div>`;
-    grid.append(b1,b2,b3);
-    body.appendChild(grid);
-
-    const table = el("table");
-    table.innerHTML = `
-      <thead><tr><th>단계</th><th>평균 점수</th><th>구간</th></tr></thead>
-      <tbody>
-        ${tierScores.map(t => `
-          <tr>
-            <td>${t.name}</td>
-            <td>${t.avg} / 100</td>
-            <td>${t.subset[0].stageIndex+1}–${t.subset[t.subset.length-1].stageIndex+1}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    `;
-    body.appendChild(table);
-
-    const btnMenu = el("button","ghost");
-    btnMenu.textContent = "메뉴로";
-    btnMenu.addEventListener("click", () => { closeModal(); resetToMenu(); });
-
-    showModal("Normal 최종 결과", body, [btnMenu]);
-  }
-
-  function goNextHardOrEnd(){
-    if(state.idx < state.stages.length - 1){
-      state.idx += 1;
-      loadStage();
-    }else{
-      showHardEndSummary();
-    }
-  }
-
-  function showHardEndSummary(){
-    const rows = state.records.filter(r => r.mode === "hard");
-    const solved = rows.filter(r => r.resultType === "solve").length;
-    const imp = rows.filter(r => r.resultType === "declare-impossible").length;
-
-    const body = el("div");
-    const p = el("p");
-    p.textContent = `목표 달성: ${solved} / 불가능 정답: ${imp}`;
-    body.appendChild(p);
-
-    const btnMenu = el("button","ghost");
-    btnMenu.textContent = "메뉴로";
-    btnMenu.addEventListener("click", () => { closeModal(); resetToMenu(); });
-
-    showModal("Hard 결과", body, [btnMenu]);
-  }
-
-  // ---------- Hard: 불가능 버튼(이유 없음 + 오판 시 1스테이지로) ----------
-  function hardDeclareImpossible(){
-    // 실제로 가능한지 즉시 판정
-    const min = bfsMinMoves(state.caps, state.goal);
-    const actuallyImpossible = (min === null);
-
-    if(actuallyImpossible){
-      endStage({type:"declare-impossible"});
-      return;
-    }
-
-    // 오판 패널티: 1스테이지로
-    stopTimer();
-
-    const body = el("div");
-    const p = el("p");
-    p.textContent = "이 스테이지는 해결할 수 있는 문제였습니다. Hard 패널티로 1스테이지로 돌아갑니다.";
-    body.appendChild(p);
-
-    const btn = el("button","bad");
-    btn.textContent = "1스테이지로";
-    btn.addEventListener("click", () => {
-      closeModal();
-      state.idx = 0;
-      loadStage();
-    });
-
-    showModal("오판", body, [btn]);
-  }
-
-  // ---------- Win ----------
-  function checkWin(){
-    if(!isGoalReached()) return;
-    endStage({type:"solve"});
-  }
-
-  // ---------- Stage loading ----------
-  function loadStage(){
-    const st = state.stages[state.idx];
-    state.caps = st.caps.slice();
-    state.goal = st.goal;
-
-    state.minMoves = (state.mode === "normal") ? bfsMinMoves(state.caps, state.goal) : null;
-    resetStageState();
-  }
-
-  function resetToMenu(){
-    state.mode = null;
-    state.stages = [];
-    state.idx = 0;
-    state.records = [];
-    setScreen("start");
-  }
-
-  // ---------- 배경 클릭으로 선택 취소 ----------
-  jugPanel.addEventListener("click", (e) => {
-    if(state.isAutoSolving) return;
-    if(e.target.closest(".jug")) return;
-    if(e.target.closest("button")) return;
-    cancelSelection();
-  });
-
-  // ---------- DEV HOTKEYS (설명 문구는 UI에서 제거됨) ----------
-  const DEV_KEYS = new Set(["₩","`","~","\\"]);
-  let devHeld = false;
-
-  function isDevKeyEvent(e){
-    if(e.code === "Backquote") return true;
-    return DEV_KEYS.has(e.key);
-  }
-
-  function devMoveStage(delta){
-    if(gameScreen.style.display === "none") return;
-    if(state.isAutoSolving) return;
-    const next = Math.max(0, Math.min(state.stages.length - 1, state.idx + delta));
-    if(next === state.idx) return;
-    state.idx = next;
-    loadStage();
-  }
-
-  function devForceClear(){
-    if(gameScreen.style.display === "none") return;
-    if(state.isAutoSolving) return;
-
-    const path = bfsPath(state.caps, state.goal);
-    if(!path){
-      // 불가능이면 아무 것도 안 함(개발자만 쓰는 기능이므로 조용히)
-      return;
-    }
-
-    state.isAutoSolving = true;
-    cancelSelection();
-
-    let step = 0;
-    const interval = 420;
-
-    const tick = () => {
-      if(step >= path.length){
-        state.isAutoSolving = false;
-        state.moves = (path.length - 1);
-        movesText.textContent = String(state.moves);
-        endStage({type:"solve"});
+      if (state.selectedJug === null) {
+        state.selectedJug = index;
+        setMessage(`${index + 1}번 물통을 선택했습니다.`);
+        render();
         return;
       }
-      state.amounts = path[step].slice();
-      for(let i=0;i<state.caps.length;i++) updateWaterVisual(i);
-      step += 1;
-      setTimeout(tick, interval);
-    };
-    tick();
-  }
 
-  document.addEventListener("keydown", (e) => {
-    if(modalOverlay.style.display === "flex") return;
+      if (state.selectedJug === index) {
+        state.selectedJug = null;
+        setMessage('물통 선택을 해제했습니다.');
+        render();
+        return;
+      }
 
-    if(isDevKeyEvent(e)){
-      devHeld = true;
-      return;
+      doPour(state.selectedJug, index);
     }
-    if(!devHeld) return;
 
-    if(e.key === "ArrowLeft"){
-      e.preventDefault();
-      devMoveStage(-1);
-    }else if(e.key === "ArrowRight"){
-      e.preventDefault();
-      devMoveStage(+1);
-    }else if(e.key === "Enter"){
-      e.preventDefault();
-      devForceClear();
+    function updateControls() {
+      const selected = state.selectedJug;
+      const locked = state.isAnimating || state.clearLocked || state.demoPlaying;
+      const stage = currentStage();
+      const selectedText = selected === null
+        ? '선택된 물통 없음'
+        : `${selected + 1}번 물통 선택됨 · 현재 ${formatLiters(state.displayAmounts[selected])}L / ${stage.capacities[selected]}L`;
+
+      selectedDisplay.textContent = selectedText;
+      fillBtn.disabled = locked || selected === null || state.amounts[selected] >= stage.capacities[selected];
+      emptyBtn.disabled = locked || selected === null || state.amounts[selected] <= 0;
+      resetBtn.disabled = state.clearLocked;
     }
-  });
 
-  document.addEventListener("keyup", (e) => {
-    if(isDevKeyEvent(e)) devHeld = false;
-  });
+    function canAct() {
+      return !state.isAnimating && !state.clearLocked && !state.demoPlaying;
+    }
 
-  // ---------- Events ----------
-  $("#btnStartNormal").addEventListener("click", () => {
-    state.mode = "normal";
-    state.stages = buildSortedStages(normalStagesRaw, "normal"); // ✅ 난이도 자동 정렬
-    state.idx = 0;
-    state.records = [];
-    setScreen("game");
-    loadStage();
-  });
+    async function doFill(index, opts = {}) {
+      const { countMove = true, fromDemo = false } = opts;
+      const cap = currentStage().capacities[index];
+      if (state.amounts[index] >= cap) {
+        setMessage('이미 가득 찬 물통입니다.');
+        return;
+      }
+      const from = [...state.amounts];
+      const to = [...state.amounts];
+      to[index] = cap;
+      if (countMove) state.moveCount += 1;
+      state.selectedJug = index;
+      setMessage(fromDemo ? `${index + 1}번 물통을 자동으로 채우는 중입니다.` : `${index + 1}번 물통을 채우는 중입니다.`);
+      const completed = await animateState(from, to, cap - from[index]);
+      if (!completed) return;
+      state.amounts = to;
+      state.displayAmounts = [...to];
+      render();
+      await checkForClear(fromDemo);
+    }
 
-  $("#btnStartHard").addEventListener("click", () => {
-    state.mode = "hard";
-    state.stages = buildSortedStages(hardStagesRaw, "hard"); // ✅ 난이도 자동 정렬
-    state.idx = 0;
-    state.records = [];
-    setScreen("game");
-    loadStage();
-  });
+    async function doEmpty(index, opts = {}) {
+      const { countMove = true, fromDemo = false } = opts;
+      if (state.amounts[index] <= 0) {
+        setMessage('이미 빈 물통입니다.');
+        return;
+      }
+      const from = [...state.amounts];
+      const to = [...state.amounts];
+      const moved = from[index];
+      to[index] = 0;
+      if (countMove) state.moveCount += 1;
+      state.selectedJug = index;
+      setMessage(fromDemo ? `${index + 1}번 물통을 자동으로 비우는 중입니다.` : `${index + 1}번 물통을 비우는 중입니다.`);
+      const completed = await animateState(from, to, moved);
+      if (!completed) return;
+      state.amounts = to;
+      state.displayAmounts = [...to];
+      render();
+      await checkForClear(fromDemo);
+    }
 
-  $("#btnBackToMenu").addEventListener("click", () => {
-    const body = el("div");
-    const p = el("p");
-    p.textContent = "메뉴로 돌아가면 현재 진행 중인 기록은 종료됩니다.";
-    body.appendChild(p);
+    async function doPour(fromIndex, toIndex, opts = {}) {
+      const { countMove = true, fromDemo = false } = opts;
+      const stage = currentStage();
+      const available = state.amounts[fromIndex];
+      const space = stage.capacities[toIndex] - state.amounts[toIndex];
+      const moved = Math.min(available, space);
 
-    const btnYes = el("button","bad");
-    btnYes.textContent = "메뉴로";
-    btnYes.addEventListener("click", () => { closeModal(); resetToMenu(); });
+      if (moved <= 0) {
+        if (available <= 0) setMessage('선택한 물통이 비어 있어서 옮길 수 없습니다.');
+        else setMessage('도착 물통이 이미 가득 차 있습니다.');
+        return;
+      }
 
-    const btnNo = el("button","good");
-    btnNo.textContent = "계속하기";
-    btnNo.addEventListener("click", () => closeModal());
+      const from = [...state.amounts];
+      const to = [...state.amounts];
+      to[fromIndex] -= moved;
+      to[toIndex] += moved;
+      if (countMove) state.moveCount += 1;
+      state.selectedJug = toIndex;
+      setMessage(fromDemo
+        ? `${fromIndex + 1}번 물통의 물을 ${toIndex + 1}번 물통으로 자동으로 옮기는 중입니다.`
+        : `${fromIndex + 1}번 물통의 물을 ${toIndex + 1}번 물통으로 옮기는 중입니다.`);
+      const completed = await animateState(from, to, moved);
+      if (!completed) return;
+      state.amounts = to;
+      state.displayAmounts = [...to];
+      render();
+      await checkForClear(fromDemo);
+    }
 
-    showModal("확인", body, [btnNo, btnYes]);
-  });
+    async function animateState(fromAmounts, toAmounts, volumeMoved) {
+      state.isAnimating = true;
+      render();
+      const duration = Math.min(1500, Math.max(420, 280 + volumeMoved * 180));
+      const start = performance.now();
+      const tokenAtStart = state.demoAbortToken;
 
-  $("#btnReset").addEventListener("click", () => {
-    const body = el("div");
-    const p = el("p");
-    p.textContent = "이 스테이지를 처음부터 다시 시작할까요?";
-    body.appendChild(p);
+      return await new Promise(resolve => {
+        function frame(now) {
+          if (tokenAtStart !== state.demoAbortToken) {
+            state.isAnimating = false;
+            state.displayAmounts = [...state.amounts];
+            render();
+            resolve(false);
+            return;
+          }
+          const t = Math.min(1, (now - start) / duration);
+          const eased = easeInOutCubic(t);
+          state.displayAmounts = fromAmounts.map((startValue, i) => startValue + (toAmounts[i] - startValue) * eased);
+          renderJugs();
+          if (t < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            state.isAnimating = false;
+            state.displayAmounts = [...toAmounts];
+            render();
+            resolve(true);
+          }
+        }
+        requestAnimationFrame(frame);
+      });
+    }
 
-    const btnYes = el("button","warn");
-    btnYes.textContent = "리셋";
-    btnYes.addEventListener("click", () => { closeModal(); resetStageState(); });
+    async function checkForClear(fromDemo = false) {
+      if (state.clearLocked || !state.amounts.includes(currentStage().target)) return;
+      state.clearLocked = true;
+      stopTimer();
+      const elapsed = performance.now() - state.stageStart;
+      const result = {
+        stageId: currentStage().id,
+        stageTitle: currentStage().title,
+        moves: state.moveCount,
+        timeMs: elapsed,
+        demo: fromDemo || state.demoPlaying
+      };
+      state.results[state.stageIndex] = result;
+      clearMoves.textContent = String(result.moves);
+      clearTime.textContent = formatTime(result.timeMs);
+      clearText.textContent = result.demo
+        ? '관리자 자동 시연으로 목표량을 달성했습니다.'
+        : '목표한 양을 정확히 만들었습니다.';
+      setMessage(result.demo ? '자동 시연이 완료되었습니다.' : '스테이지를 클리어했습니다!');
+      await pause(180);
+      state.demoPlaying = false;
+      clearOverlay.classList.add('active');
+      nextStageBtn.textContent = state.stageIndex >= stages.length - 1 ? '결과 보기' : '다음 스테이지';
+    }
 
-    const btnNo = el("button","ghost");
-    btnNo.textContent = "취소";
-    btnNo.addEventListener("click", () => closeModal());
+    function showSummary() {
+      stopTimer();
+      clearOverlay.classList.remove('active');
+      showScreen('summary');
+      summaryList.innerHTML = '';
+      let sumMoves = 0;
+      let sumTime = 0;
 
-    showModal("스테이지 리셋", body, [btnNo, btnYes]);
-  });
+      stages.forEach((stage, idx) => {
+        const result = state.results[idx] || { moves: '-', timeMs: 0, demo: false };
+        if (typeof result.moves === 'number') sumMoves += result.moves;
+        if (typeof result.timeMs === 'number') sumTime += result.timeMs;
 
-  $("#btnFill").addEventListener("click", () => { if(!state.isAutoSolving){ fillSelected(); renderTopUI(); }});
-  $("#btnEmpty").addEventListener("click", () => { if(!state.isAutoSolving){ emptySelected(); renderTopUI(); }});
+        const row = document.createElement('div');
+        row.className = 'summary-row';
+        row.innerHTML = `
+          <div>
+            <div class="stage-name">Stage ${idx + 1} · ${stage.title}</div>
+            <span class="sub">목표 ${stage.target}L · ${stage.capacities.map(v => `${v}L`).join(' / ')}</span>
+            ${result.demo ? '<span class="demo-chip">관리자 자동 시연</span>' : ''}
+          </div>
+          <div class="summary-metric">${result.moves}</div>
+          <div class="summary-metric">${typeof result.timeMs === 'number' ? formatTime(result.timeMs) : '-'}</div>
+        `;
+        summaryList.appendChild(row);
+      });
 
-  btnHint.addEventListener("click", () => {
-    state.hintUsed += 1;
-    const idx = Math.min(hintLevels.length, state.hintUsed) - 1;
-    hintBox.textContent = hintLevels[idx] || hintLevels[hintLevels.length-1];
-    if(state.hintUsed >= hintLevels.length) btnHint.disabled = true;
-  });
+      totalMoves.textContent = String(sumMoves);
+      totalTime.textContent = formatTime(sumTime);
+    }
 
-  btnDeclareImpossible.addEventListener("click", () => {
-    if(state.mode !== "hard") return;
-    if(state.isAutoSolving) return;
-    hardDeclareImpossible();
-  });
+    function setMessage(text) {
+      messageEl.textContent = text;
+    }
 
-  // initial
-  setScreen("start");
-})();
-</script>
+    function formatLiters(value) {
+      const rounded = Math.round(value * 10) / 10;
+      return Number.isInteger(rounded) ? String(rounded.toFixed(0)) : String(rounded.toFixed(1));
+    }
+
+    function formatTime(ms) {
+      const totalTenths = Math.floor(ms / 100);
+      const minutes = Math.floor(totalTenths / 600);
+      const seconds = Math.floor((totalTenths % 600) / 10);
+      const tenths = totalTenths % 10;
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`;
+    }
+
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function pause(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    showScreen('start');
+  </script>
 </body>
 </html>
